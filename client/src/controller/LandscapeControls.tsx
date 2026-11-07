@@ -1,4 +1,5 @@
-import type { SlotId } from '@capsule-claw/shared';
+import type { SlotId, TurnPhase } from '@capsule-claw/shared';
+import { useEffect, useState } from 'react';
 import { usePortrait } from '../hooks/useOrientation';
 import { DPad } from './DPad';
 import { DropButton } from './DropButton';
@@ -10,12 +11,35 @@ export function LandscapeControls({
   roomCode,
   nickname,
   slot,
+  endsAt,
+  serverTimeOffset,
+  phase,
+  result,
 }: {
   roomCode: string;
   nickname: string;
   slot: SlotId;
+  endsAt: number | null;
+  serverTimeOffset: number;
+  phase: TurnPhase;
+  result: boolean | null;
 }) {
   const portrait = usePortrait();
+  const [remaining, setRemaining] = useState(0);
+  const disabled = portrait || phase !== 'aiming';
+
+  useEffect(() => {
+    const update = () => {
+      setRemaining(
+        endsAt
+          ? Math.max(0, Math.ceil((endsAt - (Date.now() + serverTimeOffset)) / 1000))
+          : 0,
+      );
+    };
+    update();
+    const timer = window.setInterval(update, 100);
+    return () => window.clearInterval(timer);
+  }, [endsAt, serverTimeOffset]);
 
   return (
     <main className={`controller-page controller-slot-${slot + 1}`}>
@@ -26,7 +50,7 @@ export function LandscapeControls({
       </header>
       <section className="control-layout">
         <div className="control-left">
-          <DPad />
+          <DPad disabled={disabled} />
         </div>
         <div className="control-center">
           <p>YOUR CLAW</p>
@@ -34,12 +58,16 @@ export function LandscapeControls({
           <strong>{SLOT_NAMES[slot]}</strong>
           <div className="turn-timer">
             <small>TURN TIME</small>
-            <b>--:--</b>
+            <b>0:{remaining.toString().padStart(2, '0')}</b>
           </div>
-          <p className="stage-note">이동과 드롭 동작은 다음 단계에서 활성화됩니다.</p>
+          <p className="stage-note">
+            {result !== null
+              ? result ? '캡슐을 획득했습니다!' : '아쉽지만 빈 집게예요.'
+              : phase === 'aiming' ? '방향을 정한 뒤 DROP을 누르세요.' : phase.toUpperCase()}
+          </p>
         </div>
         <div className="control-right">
-          <DropButton />
+          <DropButton disabled={disabled} />
         </div>
       </section>
       {portrait && <OrientationOverlay />}

@@ -58,6 +58,7 @@ export function registerHandlers(io: TypedServer, rooms: RoomManager): void {
 
       if (result.status === 'joined') {
         socket.data.playerSlot = result.slot;
+        void socket.join(`player:${roomCode}:${result.slot}`);
         socket.emit('joined', {
           slot: result.slot,
           sessionToken: result.sessionToken,
@@ -66,11 +67,29 @@ export function registerHandlers(io: TypedServer, rooms: RoomManager): void {
         if (player) {
           io.to(`room:${roomCode}`).emit('player:joined', player);
         }
+        const turn = game.getTurnStart(result.slot);
+        if (turn) {
+          socket.emit('turn:start', turn);
+        }
       } else {
         socket.emit('queued', {
           position: result.position,
           sessionToken: result.sessionToken,
         });
+      }
+    });
+
+    socket.on('move', ({ direction, pressed }) => {
+      const { roomCode, playerSlot } = socket.data;
+      if (roomCode && playerSlot !== undefined) {
+        rooms.getGame(roomCode)?.setDirection(playerSlot, direction, pressed);
+      }
+    });
+
+    socket.on('drop', () => {
+      const { roomCode, playerSlot } = socket.data;
+      if (roomCode && playerSlot !== undefined) {
+        rooms.getGame(roomCode)?.requestDrop(playerSlot);
       }
     });
 

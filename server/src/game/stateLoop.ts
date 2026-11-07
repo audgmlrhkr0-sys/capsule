@@ -21,6 +21,11 @@ export function startStateLoop(io: TypedServer, rooms: RoomManager): () => void 
   const timer = setInterval(() => {
     for (const game of rooms.games()) {
       game.tick(FIXED_TIMESTEP_MS);
+      for (const result of game.drainTurnResults()) {
+        io.to(`player:${game.roomCode}:${result.slot}`).emit('turn:result', {
+          success: result.success,
+        });
+      }
     }
 
     tickCount += 1;

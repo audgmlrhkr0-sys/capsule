@@ -9,7 +9,7 @@ const DIRECTIONS: Array<{ direction: Direction; symbol: string }> = [
   { direction: 'down', symbol: '↓' },
 ];
 
-export function DPad() {
+export function DPad({ disabled = false }: { disabled?: boolean }) {
   const activeRef = useRef(new Set<Direction>());
   const [active, setActive] = useState<Set<Direction>>(() => new Set());
 
@@ -23,8 +23,19 @@ export function DPad() {
     [],
   );
 
+  useEffect(() => {
+    if (disabled) {
+      for (const direction of activeRef.current) {
+        socket.emit('move', { direction, pressed: false });
+      }
+      activeRef.current.clear();
+      setActive(new Set());
+    }
+  }, [disabled]);
+
   const press = (direction: Direction, event: PointerEvent<HTMLButtonElement>) => {
     event.preventDefault();
+    if (disabled) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     if (!activeRef.current.has(direction)) {
       activeRef.current.add(direction);
@@ -49,6 +60,7 @@ export function DPad() {
           className={`dpad-${direction}`}
           data-active={active.has(direction)}
           aria-label={`Move ${direction}`}
+          disabled={disabled}
           key={direction}
           onPointerDown={(event) => press(direction, event)}
           onPointerUp={(event) => release(direction, event)}

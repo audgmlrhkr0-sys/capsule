@@ -1,6 +1,6 @@
 # Capsule Claw
 
-Stage 3 foundation for a multiplayer capsule-claw display and controller.
+Stage 4 foundation for a multiplayer capsule-claw display and controller.
 
 ## Run locally
 
@@ -15,6 +15,8 @@ Each room runs a server-authoritative Matter.js simulation with 36 capsules.
 The display receives 20 Hz snapshots and interpolates them on Canvas 2D.
 Up to three players can join from `/play/:roomCode`; additional players see
 their basic queue position. Joined players receive a landscape touch controller.
+Each occupied slot gets a server-timed 30-second claw turn with continuous
+movement, deterministic capsule capture, and drop/lift/dispense/result phases.
 
 ## Commands
 
@@ -23,5 +25,5 @@ their basic queue position. Joined players receive a landscape touch controller.
 - `npm run build` — build all workspaces
 - `npm test` — run focused server tests
 
-Claw movement, turns, prizes, robust queue/session lifecycle, and administration
-remain placeholders for later stages.
+Prizes, robust queue/session lifecycle, and administration remain placeholders
+for later stages.

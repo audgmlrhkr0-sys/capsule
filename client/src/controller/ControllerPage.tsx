@@ -1,4 +1,9 @@
-import type { JoinResult, SlotId } from '@capsule-claw/shared';
+import type {
+  JoinResult,
+  PublicGameState,
+  SlotId,
+  TurnPhase,
+} from '@capsule-claw/shared';
 import { useEffect, useRef, useState } from 'react';
 import {
   getPlayerSession,
@@ -18,11 +23,17 @@ export function ControllerPage({ roomCode }: { roomCode: string }) {
   const [controller, setController] = useState<ControllerState>({ status: 'nickname' });
   const [nickname, setNickname] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [turnEndsAt, setTurnEndsAt] = useState<number | null>(null);
+  const [serverTimeOffset, setServerTimeOffset] = useState(0);
+  const [phase, setPhase] = useState<TurnPhase>('waiting');
+  const [turnResult, setTurnResult] = useState<boolean | null>(null);
   const pendingNickname = useRef<string | null>(null);
+  const slotRef = useRef<SlotId | null>(null);
 
   const applyResult = (result: JoinResult) => {
     savePlayerSession(roomCode, result.sessionToken);
     if (result.status === 'joined') {
+      slotRef.current = result.slot;
       setController({ status: 'joined', slot: result.slot });
     } else {
       setController({ status: 'queued', position: result.position });
@@ -58,6 +69,7 @@ export function ControllerPage({ roomCode }: { roomCode: string }) {
     };
     const onJoined = ({ slot, sessionToken }: { slot: SlotId; sessionToken: string }) => {
       savePlayerSession(roomCode, sessionToken);
+      slotRef.current = slot;
       setController({ status: 'joined', slot });
     };
     const onQueued = ({
@@ -73,17 +85,40 @@ export function ControllerPage({ roomCode }: { roomCode: string }) {
     const onQueueUpdate = ({ position }: { position: number }) => {
       setController({ status: 'queued', position });
     };
+    const onTurnStart = ({ endsAt }: { timeLimit: number; endsAt: number }) => {
+      setTurnEndsAt(endsAt);
+      setTurnResult(null);
+      setPhase('aiming');
+    };
+    const onStateUpdate = (state: PublicGameState) => {
+      setServerTimeOffset(state.serverTime - Date.now());
+      const slot = slotRef.current;
+      if (slot !== null) {
+        setPhase(state.claws[slot]?.phase ?? 'waiting');
+      }
+    };
+    const onTurnResult = ({ success }: { success: boolean; prizeName?: string }) => {
+      setTurnEndsAt(null);
+      setTurnResult(success);
+      setPhase('result');
+    };
 
     socket.on('connect', onConnect);
     socket.on('joined', onJoined);
     socket.on('queued', onQueued);
     socket.on('queue:update', onQueueUpdate);
+    socket.on('turn:start', onTurnStart);
+    socket.on('state:update', onStateUpdate);
+    socket.on('turn:result', onTurnResult);
     socket.connect();
     return () => {
       socket.off('connect', onConnect);
       socket.off('joined', onJoined);
       socket.off('queued', onQueued);
       socket.off('queue:update', onQueueUpdate);
+      socket.off('turn:start', onTurnStart);
+      socket.off('state:update', onStateUpdate);
+      socket.off('turn:result', onTurnResult);
       socket.disconnect();
     };
   }, [roomCode]);
@@ -106,6 +141,10 @@ export function ControllerPage({ roomCode }: { roomCode: string }) {
         roomCode={roomCode}
         nickname={nickname}
         slot={controller.slot}
+        endsAt={turnEndsAt}
+        serverTimeOffset={serverTimeOffset}
+        phase={phase}
+        result={turnResult}
       />
     );
   }

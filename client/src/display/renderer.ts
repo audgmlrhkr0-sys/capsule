@@ -6,6 +6,7 @@ import type {
 
 const WIDTH = 1200;
 const HEIGHT = 620;
+const DEPTH = 620;
 const CAPSULE_COLORS: Record<CapsuleColor, [string, string]> = {
   coral: ['#ff6b6b', '#d83e5c'],
   gold: ['#ffd166', '#e89c2f'],
@@ -126,6 +127,9 @@ function drawClaws(context: CanvasRenderingContext2D, state: PublicGameState): v
     const color = CLAW_COLORS[index]!;
     const x = claw.x;
     const headY = 138 + claw.height;
+    const depth = Math.max(0, Math.min(1, claw.z / DEPTH));
+    context.save();
+    context.globalAlpha = 0.82 + depth * 0.18;
     context.strokeStyle = color;
     context.lineWidth = 4;
     context.beginPath();
@@ -143,19 +147,27 @@ function drawClaws(context: CanvasRenderingContext2D, state: PublicGameState): v
     context.strokeStyle = '#dce8f7';
     context.lineWidth = 6;
     context.beginPath();
+    const grip = claw.heldCapsuleId ? 25 : 43;
     context.moveTo(x - 19, headY + 4);
-    context.quadraticCurveTo(x - 35, headY + 36, x - 43, headY + 55);
+    context.quadraticCurveTo(x - 35, headY + 36, x - grip, headY + 55);
     context.moveTo(x + 19, headY + 4);
-    context.quadraticCurveTo(x + 35, headY + 36, x + 43, headY + 55);
+    context.quadraticCurveTo(x + 35, headY + 36, x + grip, headY + 55);
     context.stroke();
+
+    context.fillStyle = 'rgba(227, 239, 252, 0.75)';
+    context.font = '700 10px Inter, sans-serif';
+    context.textAlign = 'center';
+    context.fillText(claw.phase.toUpperCase(), x, 104);
+    context.restore();
   });
 }
 
 function drawCapsules(context: CanvasRenderingContext2D, capsules: CapsuleState[]): void {
   const sorted = [...capsules].sort((left, right) => left.z - right.z);
   for (const capsule of sorted) {
-    const depthScale = 0.84 + capsule.z * 0.18;
-    const x = WIDTH / 2 + (capsule.x - WIDTH / 2) * (0.94 + capsule.z * 0.06);
+    const depth = Math.max(0, Math.min(1, capsule.z / DEPTH));
+    const depthScale = 0.84 + depth * 0.18;
+    const x = WIDTH / 2 + (capsule.x - WIDTH / 2) * (0.94 + depth * 0.06);
     const y = capsule.y;
     const radius = capsule.radius * depthScale;
     const [top, bottom] = CAPSULE_COLORS[capsule.color];
@@ -163,7 +175,7 @@ function drawCapsules(context: CanvasRenderingContext2D, capsules: CapsuleState[
     context.save();
     context.translate(x, y);
     context.rotate(capsule.angle);
-    context.shadowColor = `rgba(0, 0, 0, ${0.28 + capsule.z * 0.22})`;
+    context.shadowColor = `rgba(0, 0, 0, ${0.28 + depth * 0.22})`;
     context.shadowBlur = 13;
     context.shadowOffsetY = 9;
 

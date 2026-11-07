@@ -4,6 +4,7 @@ import {
   CAPSULE_COLORS,
   CAPSULE_RADIUS,
   INITIAL_CAPSULE_COUNT,
+  PHYSICS_DEPTH,
   PHYSICS_HEIGHT,
   PHYSICS_WIDTH,
 } from './constants.js';
@@ -75,18 +76,28 @@ export class CapsulePhysics {
     return this.capsules.delete(id);
   }
 
+  takeNearest(x: number, z: number, maximumDistance: number): CapsuleState | null {
+    let nearest: CapsuleBody | null = null;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    for (const capsule of this.capsules.values()) {
+      const distance = Math.hypot(capsule.body.position.x - x, capsule.z - z);
+      if (distance <= maximumDistance + 1e-9 && distance < nearestDistance) {
+        nearest = capsule;
+        nearestDistance = distance;
+      }
+    }
+    if (!nearest) {
+      return null;
+    }
+    const state = this.serializeCapsule(nearest);
+    this.removeCapsule(nearest.id);
+    return state;
+  }
+
   serialize(): CapsuleState[] {
     return [...this.capsules.values()]
       .sort((left, right) => left.id.localeCompare(right.id, undefined, { numeric: true }))
-      .map(({ id, body, color, z, radius }) => ({
-        id,
-        x: round(body.position.x),
-        y: round(body.position.y),
-        angle: round(body.angle),
-        z,
-        radius,
-        color,
-      }));
+      .map((capsule) => this.serializeCapsule(capsule));
   }
 
   get count(): number {
@@ -109,9 +120,21 @@ export class CapsulePhysics {
     });
     const id = `capsule-${this.nextId++}`;
     const color = CAPSULE_COLORS[index % CAPSULE_COLORS.length]!;
-    const z = round(0.15 + this.random() * 0.85);
+    const z = round(60 + this.random() * (PHYSICS_DEPTH - 120));
     this.capsules.set(id, { id, body, color, z, radius });
     Matter.Composite.add(this.engine.world, body);
+  }
+
+  private serializeCapsule({ id, body, color, z, radius }: CapsuleBody): CapsuleState {
+    return {
+      id,
+      x: round(body.position.x),
+      y: round(body.position.y),
+      angle: round(body.angle),
+      z,
+      radius,
+      color,
+    };
   }
 }
 

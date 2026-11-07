@@ -621,6 +621,10 @@ input {
   transform: scale(0.94);
 }
 
+.dpad button:disabled {
+  opacity: 0.38;
+}
+
 .dpad-up { grid-area: 1 / 2; }
 .dpad-left { grid-area: 2 / 1; }
 .dpad-right { grid-area: 2 / 3; }
@@ -720,6 +724,11 @@ input {
 .drop-button[data-active="true"] {
   transform: scale(0.95);
   filter: brightness(0.9);
+}
+
+.drop-button:disabled {
+  opacity: 0.42;
+  filter: grayscale(0.35);
 }
 
 .drop-button span {
