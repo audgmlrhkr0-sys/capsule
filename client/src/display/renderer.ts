@@ -17,7 +17,6 @@ const CLAW_HEAD_OFFSET = 138;
 const BACK_SCALE_RATIO = 0.72;
 const TURN_SECONDS = 30;
 
-const GREEN = '#3f6b22';
 const GREEN_DEEP = '#2c4c17';
 
 const CAPSULE_COLORS: Record<CapsuleColor, string> = {
@@ -649,7 +648,7 @@ function drawChute(context: CanvasRenderingContext2D, room: Room): void {
   const backBottomLeft = project(room, CHUTE_LEFT, WORLD_HEIGHT, CHUTE_FRONT_DEPTH);
 
   context.save();
-  context.fillStyle = 'rgb(44 76 23 / 30%)';
+  context.fillStyle = 'rgb(255 255 255 / 22%)';
   polygon(context, [
     [backTopLeft.x, backTopLeft.y],
     [backTopRight.x, backTopRight.y],
@@ -673,20 +672,6 @@ function drawChute(context: CanvasRenderingContext2D, room: Room): void {
   context.fillStyle = glass;
   polygon(context, front.map(({ x, y }) => [x, y] as const));
   context.fill();
-
-  context.strokeStyle = GREEN;
-  context.lineJoin = 'round';
-  context.lineWidth = 6 * room.frontScale;
-  polygon(context, front.map(({ x, y }) => [x, y] as const));
-  context.stroke();
-  context.beginPath();
-  context.moveTo(front[0]!.x, front[0]!.y);
-  context.lineTo(backTopLeft.x, backTopLeft.y);
-  context.lineTo(backTopRight.x, backTopRight.y);
-  context.lineTo(front[1]!.x, front[1]!.y);
-  context.moveTo(backTopLeft.x, backTopLeft.y);
-  context.lineTo(backBottomLeft.x, backBottomLeft.y);
-  context.stroke();
   context.restore();
 }
 
