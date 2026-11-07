@@ -21,22 +21,33 @@ import {
   CLAW_X_MIN,
   CLAW_Z_MAX,
   CLAW_Z_MIN,
+  COOLDOWN_DURATION_MS,
+  DISCONNECT_GRACE_MS,
   DISPENSE_DURATION_MS,
   DROP_DURATION_MS,
   LIFT_DURATION_MS,
+  IDLE_TIMEOUT_MS,
   OUTLET_X,
   OUTLET_Z,
   PHYSICS_DEPTH,
   PHYSICS_WIDTH,
   RESULT_DURATION_MS,
+  REFILL_THRESHOLD,
   TURN_DURATION_MS,
 } from './constants.js';
 
 const PLAYER_COLORS: readonly PlayerColor[] = ['red', 'blue', 'yellow'];
 
-interface QueuedPlayer {
+interface ControllerSession {
   nickname: string;
   sessionToken: string;
+  state: 'active' | 'queued' | 'cooldown';
+  slot?: SlotId;
+  connectedSocketId: string | null;
+  disconnectedAt: number | null;
+  lastActivityAt: number;
+  cooldownEndsAt: number | null;
+  lastResult: { success: boolean; prizeName?: string } | null;
 }
 
 interface RuntimeClaw extends ClawState {
@@ -49,11 +60,28 @@ interface RuntimeClaw extends ClawState {
 }
 
 export interface TurnResultEvent {
+  sessionToken: string;
   slot: SlotId;
   success: boolean;
   prizeName?: string;
   win?: WinRecord;
 }
+
+export type SessionConnectResult =
+  | JoinResult
+  | { status: 'rejected'; error: string };
+
+export type LifecycleEvent =
+  | { type: 'player:left'; slot: SlotId }
+  | {
+      type: 'joined';
+      sessionToken: string;
+      slot: SlotId;
+      turn: { timeLimit: number; endsAt: number };
+    }
+  | { type: 'queue:update'; sessionToken: string; position: number }
+  | { type: 'cooldown'; sessionToken: string; endsAt: number }
+  | { type: 'kicked'; sessionToken: string; reason: string };
 
 export class GameRoom {
   readonly physics: CapsulePhysics;
@@ -62,8 +90,8 @@ export class GameRoom {
     PlayerState | null,
     PlayerState | null,
   ] = [null, null, null];
-  private readonly sessionSlots = new Map<string, SlotId>();
-  private readonly queue: QueuedPlayer[] = [];
+  private readonly sessions = new Map<string, ControllerSession>();
+  private readonly queue: string[] = [];
   private readonly claws: [RuntimeClaw, RuntimeClaw, RuntimeClaw] = [
     this.createWaitingClaw(0),
     this.createWaitingClaw(1),
@@ -71,6 +99,7 @@ export class GameRoom {
   ];
   private readonly heldCapsules = new Map<SlotId, CapsuleState>();
   private readonly turnResults: TurnResultEvent[] = [];
+  private readonly lifecycleEvents: LifecycleEvent[] = [];
   private readonly recentWins: WinRecord[] = [];
 
   constructor(
@@ -88,57 +117,108 @@ export class GameRoom {
 
   tick(fixedDeltaMs: number): void {
     this.physics.tick(fixedDeltaMs);
+    this.evictExpiredSessions();
     for (const slot of [0, 1, 2] as const) {
       this.tickClaw(slot, fixedDeltaMs);
     }
+    this.refillCapsules();
   }
 
   join(nickname: string, sessionToken?: string): JoinResult {
-    if (sessionToken) {
-      const existingSlot = this.sessionSlots.get(sessionToken);
-      if (existingSlot !== undefined) {
-        return { status: 'joined', slot: existingSlot, sessionToken };
-      }
-      const queuedIndex = this.queue.findIndex((player) => player.sessionToken === sessionToken);
-      if (queuedIndex >= 0) {
-        return { status: 'queued', position: queuedIndex + 1, sessionToken };
-      }
+    const result = this.connect(nickname, sessionToken, 'test-connection');
+    if (result.status === 'rejected') {
+      throw new Error(result.error);
     }
-
-    const token = this.createSessionToken();
-    const slot = this.playerSlots.findIndex((player) => player === null);
-    if (slot < 0) {
-      this.queue.push({ nickname, sessionToken: token });
-      return { status: 'queued', position: this.queue.length, sessionToken: token };
-    }
-
-    const slotId = slot as SlotId;
-    this.playerSlots[slotId] = {
-      slot: slotId,
-      nickname,
-      color: PLAYER_COLORS[slotId]!,
-      turnEndsAt: this.now() + TURN_DURATION_MS,
-    };
-    this.sessionSlots.set(token, slotId);
-    this.startTurn(slotId);
-    return { status: 'joined', slot: slotId, sessionToken: token };
+    return result;
   }
 
   leave(sessionToken: string): SlotId | null {
-    const slot = this.sessionSlots.get(sessionToken);
-    if (slot !== undefined) {
-      this.sessionSlots.delete(sessionToken);
-      this.playerSlots[slot] = null;
-      this.heldCapsules.delete(slot);
-      this.claws[slot] = this.createWaitingClaw(slot);
-      return slot;
+    const slot = this.sessions.get(sessionToken)?.slot ?? null;
+    this.removeSession(sessionToken, false);
+    return slot;
+  }
+
+  connect(
+    nickname: string,
+    sessionToken: string | undefined,
+    socketId: string,
+  ): SessionConnectResult {
+    const existing = sessionToken ? this.sessions.get(sessionToken) : undefined;
+    if (existing) {
+      if (
+        existing.connectedSocketId !== null &&
+        existing.connectedSocketId !== socketId
+      ) {
+        return {
+          status: 'rejected',
+          error: 'This session is already connected on another device',
+        };
+      }
+      existing.connectedSocketId = socketId;
+      existing.disconnectedAt = null;
+      existing.lastActivityAt = this.now();
+      existing.nickname = nickname;
+      if (existing.state === 'active' && existing.slot !== undefined) {
+        return {
+          status: 'joined',
+          slot: existing.slot,
+          sessionToken: existing.sessionToken,
+        };
+      }
+      if (existing.state === 'queued') {
+        return {
+          status: 'queued',
+          position: this.queue.indexOf(existing.sessionToken) + 1,
+          sessionToken: existing.sessionToken,
+        };
+      }
+      if (
+        existing.cooldownEndsAt !== null &&
+        this.now() < existing.cooldownEndsAt
+      ) {
+        return {
+          status: 'cooldown',
+          endsAt: existing.cooldownEndsAt,
+          sessionToken: existing.sessionToken,
+        };
+      }
+      return this.assignOrQueue(existing);
     }
 
-    const queuedIndex = this.queue.findIndex((player) => player.sessionToken === sessionToken);
-    if (queuedIndex >= 0) {
-      this.queue.splice(queuedIndex, 1);
+    const token = this.createSessionToken();
+    const session: ControllerSession = {
+      nickname,
+      sessionToken: token,
+      state: 'cooldown',
+      connectedSocketId: socketId,
+      disconnectedAt: null,
+      lastActivityAt: this.now(),
+      cooldownEndsAt: null,
+      lastResult: null,
+    };
+    this.sessions.set(token, session);
+    return this.assignOrQueue(session);
+  }
+
+  disconnect(sessionToken: string, socketId: string): void {
+    const session = this.sessions.get(sessionToken);
+    if (!session || session.connectedSocketId !== socketId) {
+      return;
     }
-    return null;
+    session.connectedSocketId = null;
+    session.disconnectedAt = this.now();
+    if (session.slot !== undefined) {
+      this.claws[session.slot].pressed.clear();
+    }
+  }
+
+  touchSession(sessionToken: string): boolean {
+    const session = this.sessions.get(sessionToken);
+    if (!session || (session.state !== 'active' && session.state !== 'queued')) {
+      return false;
+    }
+    session.lastActivityAt = this.now();
+    return true;
   }
 
   getPlayer(slot: SlotId): PlayerState | null {
@@ -150,6 +230,47 @@ export class GameRoom {
     return endsAt
       ? { timeLimit: TURN_DURATION_MS, endsAt }
       : null;
+  }
+
+  getSessionRestore(sessionToken: string): {
+    result: { success: boolean; prizeName?: string } | null;
+    cooldownEndsAt: number | null;
+  } | null {
+    const session = this.sessions.get(sessionToken);
+    return session
+      ? {
+          result: session.lastResult,
+          cooldownEndsAt: session.cooldownEndsAt,
+        }
+      : null;
+  }
+
+  setSessionDirection(
+    sessionToken: string,
+    direction: Direction,
+    pressed: boolean,
+  ): boolean {
+    const session = this.sessions.get(sessionToken);
+    if (session?.state !== 'active' || session.slot === undefined) {
+      return false;
+    }
+    const accepted = this.setDirection(session.slot, direction, pressed);
+    if (accepted) {
+      session.lastActivityAt = this.now();
+    }
+    return accepted;
+  }
+
+  requestSessionDrop(sessionToken: string): boolean {
+    const session = this.sessions.get(sessionToken);
+    if (session?.state !== 'active' || session.slot === undefined) {
+      return false;
+    }
+    const accepted = this.requestDrop(session.slot);
+    if (accepted) {
+      session.lastActivityAt = this.now();
+    }
+    return accepted;
   }
 
   setDirection(slot: SlotId, direction: Direction, pressed: boolean): boolean {
@@ -182,6 +303,23 @@ export class GameRoom {
 
   drainTurnResults(): TurnResultEvent[] {
     return this.turnResults.splice(0);
+  }
+
+  drainLifecycleEvents(): LifecycleEvent[] {
+    return this.lifecycleEvents.splice(0);
+  }
+
+  refillCapsules(force = false): boolean {
+    const operationsActive = this.claws.some((claw) =>
+      ['dropping', 'lifting', 'dispensing'].includes(claw.phase),
+    );
+    if (operationsActive || this.heldCapsules.size > 0) {
+      return false;
+    }
+    if (force || this.physics.count <= REFILL_THRESHOLD) {
+      this.physics.refill();
+    }
+    return true;
   }
 
   serialize(): PublicGameState {
@@ -266,6 +404,10 @@ export class GameRoom {
         claw.phase = 'result';
         claw.phaseElapsed = 0;
         const player = this.playerSlots[slot];
+        const session = this.sessionForSlot(slot);
+        if (!session) {
+          return;
+        }
         if (claw.success && claw.prizeName && player) {
           const win: WinRecord = {
             wonAt: new Date(this.now()).toISOString(),
@@ -276,23 +418,195 @@ export class GameRoom {
           this.recentWins.unshift(win);
           this.recentWins.length = Math.min(this.recentWins.length, 5);
           this.winLog?.record(win);
-          this.turnResults.push({
-            slot,
-            success: true,
+          const result = {
+            success: true as const,
             prizeName: claw.prizeName,
+          };
+          session.lastResult = result;
+          this.turnResults.push({
+            sessionToken: session.sessionToken,
+            slot,
+            ...result,
             win,
           });
         } else {
-          this.turnResults.push({ slot, success: false });
+          session.lastResult = { success: false };
+          this.turnResults.push({
+            sessionToken: session.sessionToken,
+            slot,
+            success: false,
+          });
         }
       }
       return;
     }
 
     if (claw.phase === 'result' && claw.phaseElapsed >= RESULT_DURATION_MS) {
-      claw.phase = 'waiting';
-      claw.phaseElapsed = 0;
+      this.completeTurn(slot);
     }
+  }
+
+  private assignOrQueue(session: ControllerSession): JoinResult {
+    session.cooldownEndsAt = null;
+    session.lastResult = null;
+    session.lastActivityAt = this.now();
+    const availableSlot = this.playerSlots.findIndex((player) => player === null);
+    if (availableSlot < 0) {
+      session.state = 'queued';
+      delete session.slot;
+      if (!this.queue.includes(session.sessionToken)) {
+        this.queue.push(session.sessionToken);
+      }
+      this.emitQueuePositions();
+      return {
+        status: 'queued',
+        position: this.queue.indexOf(session.sessionToken) + 1,
+        sessionToken: session.sessionToken,
+      };
+    }
+    const slot = availableSlot as SlotId;
+    this.activateSession(session, slot, false);
+    return { status: 'joined', slot, sessionToken: session.sessionToken };
+  }
+
+  private activateSession(
+    session: ControllerSession,
+    slot: SlotId,
+    emitLifecycle: boolean,
+  ): void {
+    session.state = 'active';
+    session.slot = slot;
+    session.cooldownEndsAt = null;
+    session.lastResult = null;
+    session.lastActivityAt = this.now();
+    this.playerSlots[slot] = {
+      slot,
+      nickname: session.nickname,
+      color: PLAYER_COLORS[slot]!,
+      turnEndsAt: this.now() + TURN_DURATION_MS,
+    };
+    this.startTurn(slot);
+    if (emitLifecycle) {
+      this.lifecycleEvents.push({
+        type: 'joined',
+        sessionToken: session.sessionToken,
+        slot,
+        turn: this.getTurnStart(slot)!,
+      });
+    }
+  }
+
+  private completeTurn(slot: SlotId): void {
+    const session = this.sessionForSlot(slot);
+    this.releaseSlot(slot);
+    if (!session) {
+      this.promoteQueue(slot);
+      return;
+    }
+    session.state = 'cooldown';
+    delete session.slot;
+    session.cooldownEndsAt = this.now() + COOLDOWN_DURATION_MS;
+    this.lifecycleEvents.push({
+      type: 'cooldown',
+      sessionToken: session.sessionToken,
+      endsAt: session.cooldownEndsAt,
+    });
+    this.promoteQueue(slot);
+  }
+
+  private releaseSlot(slot: SlotId): void {
+    if (this.playerSlots[slot]) {
+      this.playerSlots[slot] = null;
+      this.lifecycleEvents.push({ type: 'player:left', slot });
+    }
+    this.heldCapsules.delete(slot);
+    this.claws[slot] = this.createWaitingClaw(slot);
+  }
+
+  private promoteQueue(slot: SlotId): void {
+    while (this.queue.length > 0) {
+      const sessionToken = this.queue.shift()!;
+      const session = this.sessions.get(sessionToken);
+      if (session?.state === 'queued') {
+        this.activateSession(session, slot, true);
+        break;
+      }
+    }
+    this.emitQueuePositions();
+  }
+
+  private removeSession(sessionToken: string, notify: boolean): void {
+    const session = this.sessions.get(sessionToken);
+    if (!session) {
+      return;
+    }
+    if (notify && session.connectedSocketId) {
+      this.lifecycleEvents.push({
+        type: 'kicked',
+        sessionToken,
+        reason: 'No controller activity for 60 seconds',
+      });
+    }
+    if (session.state === 'active' && session.slot !== undefined) {
+      const slot = session.slot;
+      this.sessions.delete(sessionToken);
+      this.releaseSlot(slot);
+      this.promoteQueue(slot);
+      return;
+    }
+    if (session.state === 'queued') {
+      const index = this.queue.indexOf(sessionToken);
+      if (index >= 0) {
+        this.queue.splice(index, 1);
+      }
+      this.emitQueuePositions();
+    }
+    this.sessions.delete(sessionToken);
+  }
+
+  private evictExpiredSessions(): void {
+    const now = this.now();
+    for (const session of [...this.sessions.values()]) {
+      if (
+        (session.state === 'active' || session.state === 'queued') &&
+        session.connectedSocketId === null &&
+        session.disconnectedAt !== null &&
+        now - session.disconnectedAt >= DISCONNECT_GRACE_MS
+      ) {
+        this.removeSession(session.sessionToken, false);
+        continue;
+      }
+      if (
+        (session.state === 'active' || session.state === 'queued') &&
+        now - session.lastActivityAt >= IDLE_TIMEOUT_MS
+      ) {
+        this.removeSession(session.sessionToken, true);
+        continue;
+      }
+      if (
+        session.state === 'cooldown' &&
+        session.cooldownEndsAt !== null &&
+        now - session.cooldownEndsAt >= IDLE_TIMEOUT_MS
+      ) {
+        this.sessions.delete(session.sessionToken);
+      }
+    }
+  }
+
+  private emitQueuePositions(): void {
+    this.queue.forEach((sessionToken, index) => {
+      this.lifecycleEvents.push({
+        type: 'queue:update',
+        sessionToken,
+        position: index + 1,
+      });
+    });
+  }
+
+  private sessionForSlot(slot: SlotId): ControllerSession | undefined {
+    return [...this.sessions.values()].find(
+      (session) => session.state === 'active' && session.slot === slot,
+    );
   }
 
   private moveClaw(claw: RuntimeClaw, deltaMs: number): void {

@@ -6,6 +6,8 @@ import type {
 } from '@capsule-claw/shared';
 import { useEffect, useRef, useState } from 'react';
 import {
+  clearPlayerSession,
+  getPlayerNickname,
   getPlayerSession,
   savePlayerSession,
 } from '../hooks/useAnonymousSession';
@@ -13,15 +15,19 @@ import { requestLandscape } from '../hooks/useOrientation';
 import { socket } from '../socket/client';
 import { LandscapeControls } from './LandscapeControls';
 import { NicknameForm } from './NicknameForm';
+import { CooldownView } from './CooldownView';
 
 type ControllerState =
   | { status: 'nickname' }
   | { status: 'joined'; slot: SlotId }
-  | { status: 'queued'; position: number };
+  | { status: 'queued'; position: number }
+  | { status: 'cooldown'; endsAt: number };
 
 export function ControllerPage({ roomCode }: { roomCode: string }) {
   const [controller, setController] = useState<ControllerState>({ status: 'nickname' });
-  const [nickname, setNickname] = useState('');
+  const [nickname, setNickname] = useState(
+    () => getPlayerNickname(roomCode) ?? '',
+  );
   const [error, setError] = useState<string | null>(null);
   const [turnEndsAt, setTurnEndsAt] = useState<number | null>(null);
   const [serverTimeOffset, setServerTimeOffset] = useState(0);
@@ -32,14 +38,19 @@ export function ControllerPage({ roomCode }: { roomCode: string }) {
   } | null>(null);
   const pendingNickname = useRef<string | null>(null);
   const slotRef = useRef<SlotId | null>(null);
+  const nicknameRef = useRef(nickname);
 
   const applyResult = (result: JoinResult) => {
-    savePlayerSession(roomCode, result.sessionToken);
+    savePlayerSession(roomCode, result.sessionToken, nicknameRef.current);
     if (result.status === 'joined') {
       slotRef.current = result.slot;
       setController({ status: 'joined', slot: result.slot });
-    } else {
+    } else if (result.status === 'queued') {
+      slotRef.current = null;
       setController({ status: 'queued', position: result.position });
+    } else {
+      slotRef.current = null;
+      setController({ status: 'cooldown', endsAt: result.endsAt });
     }
   };
 
@@ -65,13 +76,17 @@ export function ControllerPage({ roomCode }: { roomCode: string }) {
   useEffect(() => {
     const onConnect = () => {
       const pending = pendingNickname.current;
-      if (pending) {
-        emitJoin(pending);
+      const stored = getPlayerNickname(roomCode);
+      const name = pending ?? stored;
+      if (name && (pending !== null || getPlayerSession(roomCode))) {
+        nicknameRef.current = name;
+        setNickname(name);
+        emitJoin(name);
         pendingNickname.current = null;
       }
     };
     const onJoined = ({ slot, sessionToken }: { slot: SlotId; sessionToken: string }) => {
-      savePlayerSession(roomCode, sessionToken);
+      savePlayerSession(roomCode, sessionToken, nicknameRef.current);
       slotRef.current = slot;
       setController({ status: 'joined', slot });
     };
@@ -82,7 +97,8 @@ export function ControllerPage({ roomCode }: { roomCode: string }) {
       position: number;
       sessionToken: string;
     }) => {
-      savePlayerSession(roomCode, sessionToken);
+      savePlayerSession(roomCode, sessionToken, nicknameRef.current);
+      slotRef.current = null;
       setController({ status: 'queued', position });
     };
     const onQueueUpdate = ({ position }: { position: number }) => {
@@ -109,6 +125,26 @@ export function ControllerPage({ roomCode }: { roomCode: string }) {
       setTurnResult(result);
       setPhase('result');
     };
+    const onCooldown = ({ endsAt }: { endsAt: number }) => {
+      slotRef.current = null;
+      setTurnEndsAt(null);
+      setTurnResult(null);
+      setController({ status: 'cooldown', endsAt });
+    };
+    const onKicked = ({ reason }: { reason: string }) => {
+      clearPlayerSession(roomCode);
+      slotRef.current = null;
+      setController({ status: 'nickname' });
+      setError(reason);
+    };
+    const sendActivity = () => {
+      if (socket.connected && getPlayerSession(roomCode)) {
+        socket.emit('activity');
+      }
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') sendActivity();
+    };
 
     socket.on('connect', onConnect);
     socket.on('joined', onJoined);
@@ -117,6 +153,11 @@ export function ControllerPage({ roomCode }: { roomCode: string }) {
     socket.on('turn:start', onTurnStart);
     socket.on('state:update', onStateUpdate);
     socket.on('turn:result', onTurnResult);
+    socket.on('cooldown', onCooldown);
+    socket.on('kicked', onKicked);
+    const activityTimer = window.setInterval(sendActivity, 20_000);
+    window.addEventListener('focus', sendActivity);
+    document.addEventListener('visibilitychange', onVisibility);
     socket.connect();
     return () => {
       socket.off('connect', onConnect);
@@ -126,12 +167,18 @@ export function ControllerPage({ roomCode }: { roomCode: string }) {
       socket.off('turn:start', onTurnStart);
       socket.off('state:update', onStateUpdate);
       socket.off('turn:result', onTurnResult);
+      socket.off('cooldown', onCooldown);
+      socket.off('kicked', onKicked);
+      window.clearInterval(activityTimer);
+      window.removeEventListener('focus', sendActivity);
+      document.removeEventListener('visibilitychange', onVisibility);
       socket.disconnect();
     };
   }, [roomCode]);
 
   const join = (name: string) => {
     setNickname(name);
+    nicknameRef.current = name;
     setError(null);
     void requestLandscape();
     if (socket.connected) {
@@ -152,6 +199,16 @@ export function ControllerPage({ roomCode }: { roomCode: string }) {
         serverTimeOffset={serverTimeOffset}
         phase={phase}
         result={turnResult}
+      />
+    );
+  }
+
+  if (controller.status === 'cooldown') {
+    return (
+      <CooldownView
+        endsAt={controller.endsAt}
+        serverTimeOffset={serverTimeOffset}
+        onRejoin={() => join(nicknameRef.current)}
       />
     );
   }

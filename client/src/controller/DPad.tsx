@@ -33,6 +33,25 @@ export function DPad({ disabled = false }: { disabled?: boolean }) {
     }
   }, [disabled]);
 
+  useEffect(() => {
+    const clearPressed = () => {
+      for (const direction of activeRef.current) {
+        socket.emit('move', { direction, pressed: false });
+      }
+      activeRef.current.clear();
+      setActive(new Set());
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') clearPressed();
+    };
+    window.addEventListener('blur', clearPressed);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('blur', clearPressed);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, []);
+
   const press = (direction: Direction, event: PointerEvent<HTMLButtonElement>) => {
     event.preventDefault();
     if (disabled) return;

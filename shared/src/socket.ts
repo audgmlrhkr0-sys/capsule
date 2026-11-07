@@ -17,7 +17,8 @@ export interface DisplayJoined {
 
 export type JoinResult =
   | { status: 'joined'; slot: SlotId; sessionToken: string }
-  | { status: 'queued'; position: number; sessionToken: string };
+  | { status: 'queued'; position: number; sessionToken: string }
+  | { status: 'cooldown'; endsAt: number; sessionToken: string };
 
 export type AdminCommand = { type: 'stage-placeholder' };
 
@@ -32,6 +33,7 @@ export interface ClientToServerEvents {
   ) => void;
   move: (payload: { direction: Direction; pressed: boolean }) => void;
   drop: () => void;
+  activity: () => void;
   'admin:command': (command: AdminCommand, ack: Ack<void>) => void;
 }
 
@@ -45,6 +47,7 @@ export interface ServerToClientEvents {
   'queue:update': (payload: { position: number }) => void;
   'turn:start': (payload: { timeLimit: number; endsAt: number }) => void;
   'turn:result': (payload: { success: boolean; prizeName?: string }) => void;
+  cooldown: (payload: { endsAt: number }) => void;
   kicked: (payload: { reason: string }) => void;
 }
 

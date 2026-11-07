@@ -25,10 +25,38 @@ export function startStateLoop(io: TypedServer, rooms: RoomManager): () => void 
         if (result.win) {
           io.to(`display:${game.roomCode}`).emit('prize:won', result.win);
         }
-        io.to(`player:${game.roomCode}:${result.slot}`).emit('turn:result', {
+        io.to(`session:${result.sessionToken}`).emit('turn:result', {
           success: result.success,
           ...(result.prizeName ? { prizeName: result.prizeName } : {}),
         });
+      }
+      for (const event of game.drainLifecycleEvents()) {
+        if (event.type === 'player:left') {
+          io.to(`room:${game.roomCode}`).emit('player:left', { slot: event.slot });
+        } else if (event.type === 'joined') {
+          const target = io.to(`session:${event.sessionToken}`);
+          target.emit('joined', {
+            slot: event.slot,
+            sessionToken: event.sessionToken,
+          });
+          target.emit('turn:start', event.turn);
+          const player = game.getPlayer(event.slot);
+          if (player) {
+            io.to(`room:${game.roomCode}`).emit('player:joined', player);
+          }
+        } else if (event.type === 'queue:update') {
+          io.to(`session:${event.sessionToken}`).emit('queue:update', {
+            position: event.position,
+          });
+        } else if (event.type === 'cooldown') {
+          io.to(`session:${event.sessionToken}`).emit('cooldown', {
+            endsAt: event.endsAt,
+          });
+        } else {
+          io.to(`session:${event.sessionToken}`).emit('kicked', {
+            reason: event.reason,
+          });
+        }
       }
     }
 

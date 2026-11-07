@@ -1,6 +1,6 @@
 # Capsule Claw
 
-Stage 5 foundation for a multiplayer capsule-claw display and controller.
+Stage 6 foundation for a multiplayer capsule-claw display and controller.
 
 ## Run locally
 
@@ -19,6 +19,8 @@ Each occupied slot gets a server-timed 30-second claw turn with continuous
 movement, deterministic capsule capture, and drop/lift/dispense/result phases.
 Successful captures draw from validated weighted prize inventory, show a
 three-second synchronized reveal, and append an escaped UTF-8 CSV win log.
+FIFO promotion, reconnect grace, inactivity eviction, cooldowns, duplicate
+session protection, and safe capsule refill harden the controller lifecycle.
 
 ## Commands
 
@@ -27,5 +29,4 @@ three-second synchronized reveal, and append an escaped UTF-8 CSV win log.
 - `npm run build` — build all workspaces
 - `npm test` — run focused server tests
 
-Robust queue/session lifecycle and administration remain placeholders for later
-stages.
+Administration remains a placeholder for the final stage.

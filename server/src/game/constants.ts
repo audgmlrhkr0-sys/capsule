@@ -18,6 +18,10 @@ export const DROP_DURATION_MS = 700;
 export const LIFT_DURATION_MS = 700;
 export const DISPENSE_DURATION_MS = 900;
 export const RESULT_DURATION_MS = 3_000;
+export const DISCONNECT_GRACE_MS = 10_000;
+export const COOLDOWN_DURATION_MS = 10_000;
+export const IDLE_TIMEOUT_MS = 60_000;
+export const REFILL_THRESHOLD = 5;
 export const OUTLET_X = PHYSICS_WIDTH - 105;
 export const OUTLET_Z = PHYSICS_DEPTH / 2;
 

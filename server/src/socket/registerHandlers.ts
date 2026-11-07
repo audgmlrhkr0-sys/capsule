@@ -47,19 +47,24 @@ export function registerHandlers(io: TypedServer, rooms: RoomManager): void {
         return;
       }
 
-      const result = game.join(
+      const result = game.connect(
         nickname,
         socket.data.sessionToken ?? payload.sessionToken,
+        socket.id,
       );
+      if (result.status === 'rejected') {
+        ack({ ok: false, error: result.error });
+        return;
+      }
       socket.data.roomCode = roomCode;
       socket.data.sessionToken = result.sessionToken;
       socket.data.queued = result.status === 'queued';
       void socket.join(`room:${roomCode}`);
+      void socket.join(`session:${result.sessionToken}`);
       ack({ ok: true, data: result });
 
       if (result.status === 'joined') {
         socket.data.playerSlot = result.slot;
-        void socket.join(`player:${roomCode}:${result.slot}`);
         socket.emit('joined', {
           slot: result.slot,
           sessionToken: result.sessionToken,
@@ -72,25 +77,40 @@ export function registerHandlers(io: TypedServer, rooms: RoomManager): void {
         if (turn) {
           socket.emit('turn:start', turn);
         }
-      } else {
+        const restore = game.getSessionRestore(result.sessionToken);
+        if (restore?.result) {
+          socket.emit('turn:result', restore.result);
+        }
+      } else if (result.status === 'queued') {
         socket.emit('queued', {
           position: result.position,
           sessionToken: result.sessionToken,
         });
+      } else {
+        socket.emit('cooldown', { endsAt: result.endsAt });
       }
     });
 
     socket.on('move', ({ direction, pressed }) => {
-      const { roomCode, playerSlot } = socket.data;
-      if (roomCode && playerSlot !== undefined) {
-        rooms.getGame(roomCode)?.setDirection(playerSlot, direction, pressed);
+      const { roomCode, sessionToken } = socket.data;
+      if (roomCode && sessionToken) {
+        rooms
+          .getGame(roomCode)
+          ?.setSessionDirection(sessionToken, direction, pressed);
       }
     });
 
     socket.on('drop', () => {
-      const { roomCode, playerSlot } = socket.data;
-      if (roomCode && playerSlot !== undefined) {
-        rooms.getGame(roomCode)?.requestDrop(playerSlot);
+      const { roomCode, sessionToken } = socket.data;
+      if (roomCode && sessionToken) {
+        rooms.getGame(roomCode)?.requestSessionDrop(sessionToken);
+      }
+    });
+
+    socket.on('activity', () => {
+      const { roomCode, sessionToken } = socket.data;
+      if (roomCode && sessionToken) {
+        rooms.getGame(roomCode)?.touchSession(sessionToken);
       }
     });
 
@@ -103,10 +123,7 @@ export function registerHandlers(io: TypedServer, rooms: RoomManager): void {
       if (!roomCode || !sessionToken) {
         return;
       }
-      const slot = rooms.getGame(roomCode)?.leave(sessionToken);
-      if (slot !== null && slot !== undefined) {
-        io.to(`room:${roomCode}`).emit('player:left', { slot });
-      }
+      rooms.getGame(roomCode)?.disconnect(sessionToken, socket.id);
     });
   });
 }
