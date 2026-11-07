@@ -1,47 +1,33 @@
 import type { SlotId, TurnPhase } from '@capsule-claw/shared';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { usePortrait } from '../hooks/useOrientation';
 import { DPad } from './DPad';
 import { DropButton } from './DropButton';
 import { OrientationOverlay } from './OrientationOverlay';
 import { ResultView } from './ResultView';
 
-const SLOT_NAMES = ['1P 빨강', '2P 파랑', '3P 노랑'] as const;
-const PHASE_NOTES: Partial<Record<TurnPhase, string>> = {
-  aiming: '방향을 정한 뒤 내리기를 누르세요.',
-  dropping: '집게가 내려가는 중…',
-  lifting: '집게가 올라오는 중…',
-  dispensing: '배출구로 옮기는 중…',
-};
-
 export function LandscapeControls({
-  roomCode,
-  nickname,
   slot,
   endsAt,
+  turnDuration,
   serverTimeOffset,
   phase,
   result,
 }: {
-  roomCode: string;
-  nickname: string;
   slot: SlotId;
   endsAt: number | null;
+  turnDuration: number;
   serverTimeOffset: number;
   phase: TurnPhase;
   result: { success: boolean; prizeName?: string } | null;
 }) {
   const portrait = usePortrait();
-  const [remaining, setRemaining] = useState(0);
+  const [remainingMs, setRemainingMs] = useState(0);
   const disabled = portrait || phase !== 'aiming';
 
   useEffect(() => {
     const update = () => {
-      setRemaining(
-        endsAt
-          ? Math.max(0, Math.ceil((endsAt - (Date.now() + serverTimeOffset)) / 1000))
-          : 0,
-      );
+      setRemainingMs(endsAt ? Math.max(0, endsAt - (Date.now() + serverTimeOffset)) : 0);
     };
     update();
     const timer = window.setInterval(update, 100);
@@ -52,31 +38,27 @@ export function LandscapeControls({
     return <ResultView success={result.success} prizeName={result.prizeName} />;
   }
 
+  const seconds = Math.ceil(remainingMs / 1000);
+  const progress = turnDuration > 0 ? Math.min(1, remainingMs / turnDuration) : 0;
+
   return (
     <main className={`controller-page controller-slot-${slot + 1}`}>
-      <header className="controller-header">
-        <span>ROOM {roomCode}</span>
-        <strong>경북대미술관 소장품 캡슐 뽑기</strong>
-        <span>{nickname}</span>
-      </header>
-      <section className="control-layout">
-        <div className="control-left">
-          <DPad disabled={disabled} />
+      <div className="control-left">
+        <DPad disabled={disabled} />
+      </div>
+      <div className="control-center">
+        <div
+          className="turn-timer"
+          style={{ '--progress': `${progress * 360}deg` } as CSSProperties}
+          role="timer"
+          aria-label={`남은 시간 ${seconds}초`}
+        >
+          <b>{endsAt ? seconds : ''}</b>
         </div>
-        <div className="control-center">
-          <p>내 집게</p>
-          <span className="claw-color-dot" />
-          <strong>{SLOT_NAMES[slot]}</strong>
-          <div className="turn-timer">
-            <small>남은 시간</small>
-            <b>0:{remaining.toString().padStart(2, '0')}</b>
-          </div>
-          <p className="stage-note">{PHASE_NOTES[phase] ?? ''}</p>
-        </div>
-        <div className="control-right">
-          <DropButton disabled={disabled} />
-        </div>
-      </section>
+      </div>
+      <div className="control-right">
+        <DropButton disabled={disabled} />
+      </div>
       {portrait && <OrientationOverlay />}
     </main>
   );

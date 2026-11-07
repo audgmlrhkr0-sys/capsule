@@ -30,6 +30,7 @@ export function ControllerPage({ roomCode }: { roomCode: string }) {
   );
   const [error, setError] = useState<string | null>(null);
   const [turnEndsAt, setTurnEndsAt] = useState<number | null>(null);
+  const [turnDuration, setTurnDuration] = useState(30_000);
   const [serverTimeOffset, setServerTimeOffset] = useState(0);
   const [phase, setPhase] = useState<TurnPhase>('waiting');
   const [turnResult, setTurnResult] = useState<{
@@ -104,8 +105,9 @@ export function ControllerPage({ roomCode }: { roomCode: string }) {
     const onQueueUpdate = ({ position }: { position: number }) => {
       setController({ status: 'queued', position });
     };
-    const onTurnStart = ({ endsAt }: { timeLimit: number; endsAt: number }) => {
+    const onTurnStart = ({ timeLimit, endsAt }: { timeLimit: number; endsAt: number }) => {
       setTurnEndsAt(endsAt);
+      setTurnDuration(timeLimit);
       setTurnResult(null);
       setPhase('aiming');
     };
@@ -192,10 +194,9 @@ export function ControllerPage({ roomCode }: { roomCode: string }) {
   if (controller.status === 'joined') {
     return (
       <LandscapeControls
-        roomCode={roomCode}
-        nickname={nickname}
         slot={controller.slot}
         endsAt={turnEndsAt}
+        turnDuration={turnDuration}
         serverTimeOffset={serverTimeOffset}
         phase={phase}
         result={turnResult}

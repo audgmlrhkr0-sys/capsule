@@ -2,11 +2,11 @@ import type { Direction } from '@capsule-claw/shared';
 import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import { socket } from '../socket/client';
 
-const DIRECTIONS: Array<{ direction: Direction; symbol: string }> = [
-  { direction: 'up', symbol: '↑' },
-  { direction: 'left', symbol: '←' },
-  { direction: 'right', symbol: '→' },
-  { direction: 'down', symbol: '↓' },
+const DIRECTIONS: Array<{ direction: Direction; label: string }> = [
+  { direction: 'up', label: '안쪽으로' },
+  { direction: 'left', label: '왼쪽으로' },
+  { direction: 'right', label: '오른쪽으로' },
+  { direction: 'down', label: '바깥쪽으로' },
 ];
 
 export function DPad({ disabled = false }: { disabled?: boolean }) {
@@ -72,13 +72,13 @@ export function DPad({ disabled = false }: { disabled?: boolean }) {
   };
 
   return (
-    <div className="dpad" aria-label="Claw direction controls">
-      {DIRECTIONS.map(({ direction, symbol }) => (
+    <div className="dpad" aria-label="집게 방향">
+      {DIRECTIONS.map(({ direction, label }) => (
         <button
           type="button"
           className={`dpad-${direction}`}
           data-active={active.has(direction)}
-          aria-label={`Move ${direction}`}
+          aria-label={label}
           disabled={disabled}
           key={direction}
           onPointerDown={(event) => press(direction, event)}
@@ -86,7 +86,7 @@ export function DPad({ disabled = false }: { disabled?: boolean }) {
           onPointerCancel={(event) => release(direction, event)}
           onLostPointerCapture={(event) => release(direction, event)}
         >
-          {symbol}
+          <span className="dpad-arrow" aria-hidden="true" />
         </button>
       ))}
       <span className="dpad-center" />

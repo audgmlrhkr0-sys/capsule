@@ -35,7 +35,9 @@ export function DropButton({ disabled = false }: { disabled?: boolean }) {
       onPointerCancel={release}
       onLostPointerCapture={release}
     >
-      <span>내리기</span>
+      <span className="drop-cap">
+        <span>내리기</span>
+      </span>
     </button>
   );
 }
