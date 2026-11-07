@@ -3,17 +3,20 @@ import type {
   PlayerState,
   PublicGameState,
   SlotId,
+  WinRecord,
 } from '@capsule-claw/shared';
 import { QRCodeSVG } from 'qrcode.react';
 import { useEffect, useState } from 'react';
 import { socket } from '../socket/client';
 import { GameCanvas } from './GameCanvas';
+import { PrizeReveal } from './PrizeReveal';
 
 const DISPLAY_TOKEN_KEY = 'capsule-claw:display-token';
 
 export function DisplayPage() {
   const [display, setDisplay] = useState<DisplayJoined | null>(null);
   const [snapshot, setSnapshot] = useState<PublicGameState | null>(null);
+  const [reveal, setReveal] = useState<WinRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -47,10 +50,19 @@ export function DisplayPage() {
         return { ...current, players };
       });
     };
+    const prizeWon = (win: WinRecord) => {
+      setReveal(win);
+      setSnapshot((current) =>
+        current
+          ? { ...current, recentWins: [win, ...current.recentWins].slice(0, 5) }
+          : current,
+      );
+    };
     socket.on('connect', createOrReconnect);
     socket.on('state:update', receiveSnapshot);
     socket.on('player:joined', playerJoined);
     socket.on('player:left', playerLeft);
+    socket.on('prize:won', prizeWon);
     socket.connect();
 
     return () => {
@@ -58,9 +70,16 @@ export function DisplayPage() {
       socket.off('state:update', receiveSnapshot);
       socket.off('player:joined', playerJoined);
       socket.off('player:left', playerLeft);
+      socket.off('prize:won', prizeWon);
       socket.disconnect();
     };
   }, []);
+
+  useEffect(() => {
+    if (!reveal) return;
+    const timer = window.setTimeout(() => setReveal(null), 3_000);
+    return () => window.clearTimeout(timer);
+  }, [reveal]);
 
   if (error) {
     return <main className="center-panel error-panel">{error}</main>;
@@ -89,6 +108,7 @@ export function DisplayPage() {
           <div className="machine-column">
             <div className="machine-frame">
               <GameCanvas snapshot={snapshot} />
+              {reveal && <PrizeReveal win={reveal} />}
               <span className="machine-caption">SERVER-AUTHORITATIVE PHYSICS / 20 FPS DATA</span>
             </div>
             <div className="player-slots" aria-label="Player slots">
@@ -126,10 +146,24 @@ export function DisplayPage() {
                 <span>RECENT ACQUISITIONS</span>
                 <small>LIVE</small>
               </div>
-              <div className="empty-wins">
-                <span>◇</span>
-                <p>The collection awaits<br />its first winner.</p>
-              </div>
+              {snapshot?.recentWins.length ? (
+                <ol className="recent-wins-list">
+                  {snapshot.recentWins.slice(0, 5).map((win) => (
+                    <li key={`${win.wonAt}-${win.slot}`}>
+                      <span>0{win.slot + 1}</span>
+                      <div>
+                        <strong>{win.prizeName}</strong>
+                        <small>{win.nickname}</small>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <div className="empty-wins">
+                  <span>◇</span>
+                  <p>The collection awaits<br />its first winner.</p>
+                </div>
+              )}
             </section>
             <footer className="museum-note">
               <span>CC–2026</span>

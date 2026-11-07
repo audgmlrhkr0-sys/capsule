@@ -1,6 +1,6 @@
 # Capsule Claw
 
-Stage 4 foundation for a multiplayer capsule-claw display and controller.
+Stage 5 foundation for a multiplayer capsule-claw display and controller.
 
 ## Run locally
 
@@ -17,6 +17,8 @@ Up to three players can join from `/play/:roomCode`; additional players see
 their basic queue position. Joined players receive a landscape touch controller.
 Each occupied slot gets a server-timed 30-second claw turn with continuous
 movement, deterministic capsule capture, and drop/lift/dispense/result phases.
+Successful captures draw from validated weighted prize inventory, show a
+three-second synchronized reveal, and append an escaped UTF-8 CSV win log.
 
 ## Commands
 
@@ -25,5 +27,5 @@ movement, deterministic capsule capture, and drop/lift/dispense/result phases.
 - `npm run build` — build all workspaces
 - `npm test` — run focused server tests
 
-Prizes, robust queue/session lifecycle, and administration remain placeholders
-for later stages.
+Robust queue/session lifecycle and administration remain placeholders for later
+stages.

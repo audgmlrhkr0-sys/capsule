@@ -7,10 +7,13 @@ import type {
 import cors from 'cors';
 import express from 'express';
 import { createServer } from 'node:http';
+import { fileURLToPath } from 'node:url';
 import { Server } from 'socket.io';
 import { config } from './config.js';
 import { RoomManager } from './game/RoomManager.js';
 import { startStateLoop } from './game/stateLoop.js';
+import { WinLogStore } from './logging/WinLogStore.js';
+import { PrizeService } from './prizes/PrizeService.js';
 import { registerHandlers } from './socket/registerHandlers.js';
 
 const app = express();
@@ -30,7 +33,19 @@ const io = new Server<
   cors: { origin: config.clientOrigin },
 });
 
-const rooms = new RoomManager(config.publicUrl);
+const prizes = await PrizeService.fromFile(
+  new URL('../config/prizes.json', import.meta.url),
+);
+const winLog = new WinLogStore(
+  fileURLToPath(new URL('../data/wins.csv', import.meta.url)),
+);
+const rooms = new RoomManager(
+  config.publicUrl,
+  undefined,
+  undefined,
+  prizes,
+  winLog,
+);
 registerHandlers(io, rooms);
 const stopStateLoop = startStateLoop(io, rooms);
 
@@ -38,11 +53,11 @@ httpServer.listen(config.port, () => {
   console.log(`Capsule Claw server listening on http://localhost:${config.port}`);
 });
 
-function shutdown(): void {
+async function shutdown(): Promise<void> {
   stopStateLoop();
-  io.close();
-  httpServer.close(() => process.exit(0));
+  await winLog.flush();
+  io.close(() => process.exit(0));
 }
 
-process.once('SIGINT', shutdown);
-process.once('SIGTERM', shutdown);
+process.once('SIGINT', () => void shutdown());
+process.once('SIGTERM', () => void shutdown());

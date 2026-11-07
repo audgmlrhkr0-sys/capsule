@@ -23,6 +23,7 @@ export function registerHandlers(io: TypedServer, rooms: RoomManager): void {
         socket.data.displayToken = display.displayToken;
         socket.data.roomCode = display.roomCode;
         void socket.join(`room:${display.roomCode}`);
+        void socket.join(`display:${display.roomCode}`);
         ack({ ok: true, data: display });
         const game = rooms.getGame(display.roomCode);
         if (game) {

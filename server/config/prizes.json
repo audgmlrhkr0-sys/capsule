@@ -1,0 +1,50 @@
+[
+  {
+    "id": "mini-catalogue",
+    "name": "미니 전시 도록",
+    "weight": 8,
+    "stock": 20
+  },
+  {
+    "id": "art-postcard",
+    "name": "작품 엽서 세트",
+    "weight": 24,
+    "stock": 60
+  },
+  {
+    "id": "museum-sticker",
+    "name": "뮤지엄 스티커팩",
+    "weight": 28,
+    "stock": 80
+  },
+  {
+    "id": "acrylic-keyring",
+    "name": "전시 아크릴 키링",
+    "weight": 14,
+    "stock": 35
+  },
+  {
+    "id": "canvas-pouch",
+    "name": "아트 캔버스 파우치",
+    "weight": 7,
+    "stock": 15
+  },
+  {
+    "id": "artist-magnet",
+    "name": "작가 에디션 마그넷",
+    "weight": 18,
+    "stock": 45
+  },
+  {
+    "id": "exhibition-poster",
+    "name": "리미티드 전시 포스터",
+    "weight": 3,
+    "stock": 8
+  },
+  {
+    "id": "museum-pass",
+    "name": "다음 전시 초대권",
+    "weight": 1,
+    "stock": 3
+  }
+]

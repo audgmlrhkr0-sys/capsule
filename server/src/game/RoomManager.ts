@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import type { DisplayJoined } from '@capsule-claw/shared';
 import { generateRoomCode, type RandomInteger } from '../utils/roomCode.js';
+import type { WinLogStore } from '../logging/WinLogStore.js';
+import { PrizeService } from '../prizes/PrizeService.js';
 import { GameRoom } from './GameRoom.js';
 
 interface DisplayRoom {
@@ -17,6 +19,10 @@ export class RoomManager {
     private readonly publicUrl: string,
     private readonly randomInteger?: RandomInteger,
     private readonly createToken: () => string = randomUUID,
+    private readonly prizes: PrizeService = new PrizeService([
+      { id: 'default', name: '캡슐 기념품', weight: 1, stock: 100_000 },
+    ]),
+    private readonly winLog?: WinLogStore,
   ) {}
 
   createOrReconnect(displayToken?: string): DisplayJoined {
@@ -31,7 +37,14 @@ export class RoomManager {
     const room: DisplayRoom = {
       roomCode,
       displayToken: this.createToken(),
-      game: new GameRoom(roomCode),
+      game: new GameRoom(
+        roomCode,
+        Math.random,
+        Date.now,
+        randomUUID,
+        this.prizes,
+        this.winLog,
+      ),
     };
     this.roomsByCode.set(room.roomCode, room);
     this.roomsByToken.set(room.displayToken, room);

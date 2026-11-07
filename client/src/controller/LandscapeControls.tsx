@@ -4,6 +4,7 @@ import { usePortrait } from '../hooks/useOrientation';
 import { DPad } from './DPad';
 import { DropButton } from './DropButton';
 import { OrientationOverlay } from './OrientationOverlay';
+import { ResultView } from './ResultView';
 
 const SLOT_NAMES = ['CRIMSON', 'AZURE', 'MARIGOLD'] as const;
 
@@ -22,7 +23,7 @@ export function LandscapeControls({
   endsAt: number | null;
   serverTimeOffset: number;
   phase: TurnPhase;
-  result: boolean | null;
+  result: { success: boolean; prizeName?: string } | null;
 }) {
   const portrait = usePortrait();
   const [remaining, setRemaining] = useState(0);
@@ -40,6 +41,10 @@ export function LandscapeControls({
     const timer = window.setInterval(update, 100);
     return () => window.clearInterval(timer);
   }, [endsAt, serverTimeOffset]);
+
+  if (result) {
+    return <ResultView success={result.success} prizeName={result.prizeName} />;
+  }
 
   return (
     <main className={`controller-page controller-slot-${slot + 1}`}>
@@ -61,9 +66,9 @@ export function LandscapeControls({
             <b>0:{remaining.toString().padStart(2, '0')}</b>
           </div>
           <p className="stage-note">
-            {result !== null
-              ? result ? '캡슐을 획득했습니다!' : '아쉽지만 빈 집게예요.'
-              : phase === 'aiming' ? '방향을 정한 뒤 DROP을 누르세요.' : phase.toUpperCase()}
+            {phase === 'aiming'
+              ? '방향을 정한 뒤 DROP을 누르세요.'
+              : phase.toUpperCase()}
           </p>
         </div>
         <div className="control-right">

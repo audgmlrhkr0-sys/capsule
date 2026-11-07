@@ -22,8 +22,12 @@ export function startStateLoop(io: TypedServer, rooms: RoomManager): () => void 
     for (const game of rooms.games()) {
       game.tick(FIXED_TIMESTEP_MS);
       for (const result of game.drainTurnResults()) {
+        if (result.win) {
+          io.to(`display:${game.roomCode}`).emit('prize:won', result.win);
+        }
         io.to(`player:${game.roomCode}:${result.slot}`).emit('turn:result', {
           success: result.success,
+          ...(result.prizeName ? { prizeName: result.prizeName } : {}),
         });
       }
     }

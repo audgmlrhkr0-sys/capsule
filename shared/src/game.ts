@@ -50,6 +50,13 @@ export interface WinRecord {
   prizeName: string;
 }
 
+export interface PrizeConfig {
+  id: string;
+  name: string;
+  weight: number;
+  stock: number;
+}
+
 export interface PublicGameState {
   roomCode: string;
   serverTime: number;

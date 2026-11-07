@@ -26,7 +26,10 @@ export function ControllerPage({ roomCode }: { roomCode: string }) {
   const [turnEndsAt, setTurnEndsAt] = useState<number | null>(null);
   const [serverTimeOffset, setServerTimeOffset] = useState(0);
   const [phase, setPhase] = useState<TurnPhase>('waiting');
-  const [turnResult, setTurnResult] = useState<boolean | null>(null);
+  const [turnResult, setTurnResult] = useState<{
+    success: boolean;
+    prizeName?: string;
+  } | null>(null);
   const pendingNickname = useRef<string | null>(null);
   const slotRef = useRef<SlotId | null>(null);
 
@@ -94,12 +97,16 @@ export function ControllerPage({ roomCode }: { roomCode: string }) {
       setServerTimeOffset(state.serverTime - Date.now());
       const slot = slotRef.current;
       if (slot !== null) {
-        setPhase(state.claws[slot]?.phase ?? 'waiting');
+        const nextPhase = state.claws[slot]?.phase ?? 'waiting';
+        setPhase(nextPhase);
+        if (nextPhase === 'waiting') {
+          setTurnResult(null);
+        }
       }
     };
-    const onTurnResult = ({ success }: { success: boolean; prizeName?: string }) => {
+    const onTurnResult = (result: { success: boolean; prizeName?: string }) => {
       setTurnEndsAt(null);
-      setTurnResult(success);
+      setTurnResult(result);
       setPhase('result');
     };
 

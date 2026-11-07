@@ -17,7 +17,7 @@ export const CLAW_DROP_DEPTH = 360;
 export const DROP_DURATION_MS = 700;
 export const LIFT_DURATION_MS = 700;
 export const DISPENSE_DURATION_MS = 900;
-export const RESULT_DURATION_MS = 1_500;
+export const RESULT_DURATION_MS = 3_000;
 export const OUTLET_X = PHYSICS_WIDTH - 105;
 export const OUTLET_Z = PHYSICS_DEPTH / 2;
 

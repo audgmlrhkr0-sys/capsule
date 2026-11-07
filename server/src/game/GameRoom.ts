@@ -8,7 +8,10 @@ import type {
   PlayerState,
   PublicGameState,
   SlotId,
+  WinRecord,
 } from '@capsule-claw/shared';
+import type { WinLogStore } from '../logging/WinLogStore.js';
+import { PrizeService } from '../prizes/PrizeService.js';
 import { CapsulePhysics } from './CapsulePhysics.js';
 import {
   CAPSULE_RADIUS,
@@ -42,11 +45,14 @@ interface RuntimeClaw extends ClawState {
   dispenseFromX: number;
   dispenseFromZ: number;
   success: boolean;
+  prizeName: string | null;
 }
 
 export interface TurnResultEvent {
   slot: SlotId;
   success: boolean;
+  prizeName?: string;
+  win?: WinRecord;
 }
 
 export class GameRoom {
@@ -65,12 +71,17 @@ export class GameRoom {
   ];
   private readonly heldCapsules = new Map<SlotId, CapsuleState>();
   private readonly turnResults: TurnResultEvent[] = [];
+  private readonly recentWins: WinRecord[] = [];
 
   constructor(
     readonly roomCode: string,
     random: () => number = Math.random,
     private readonly now: () => number = Date.now,
     private readonly createSessionToken: () => string = randomUUID,
+    private readonly prizes: PrizeService = new PrizeService([
+      { id: 'test-prize', name: '캡슐 기념품', weight: 1, stock: 100_000 },
+    ]),
+    private readonly winLog?: WinLogStore,
   ) {
     this.physics = new CapsulePhysics(random);
   }
@@ -178,11 +189,11 @@ export class GameRoom {
       roomCode: this.roomCode,
       serverTime: this.now(),
       capsules: [...this.physics.serialize(), ...this.heldCapsules.values()],
-      claws: this.claws.map(({ pressed, phaseElapsed, dispenseFromX, dispenseFromZ, success, ...claw }) => ({
+      claws: this.claws.map(({ pressed, phaseElapsed, dispenseFromX, dispenseFromZ, success, prizeName, ...claw }) => ({
         ...claw,
       })),
       players: this.playerSlots.map((player) => (player ? { ...player } : null)),
-      recentWins: [],
+      recentWins: this.recentWins.map((win) => ({ ...win })),
     };
   }
 
@@ -213,11 +224,17 @@ export class GameRoom {
       if (progress === 1) {
         const threshold = 2 * CAPSULE_RADIUS * 1.2;
         const capsule = this.physics.takeNearest(claw.x, claw.z, threshold);
-        claw.success = capsule !== null;
+        claw.success = false;
+        claw.prizeName = null;
         if (capsule) {
           claw.heldCapsuleId = capsule.id;
           this.heldCapsules.set(slot, capsule);
           this.positionHeldCapsule(slot);
+          const prize = this.prizes.draw();
+          if (prize) {
+            claw.success = true;
+            claw.prizeName = prize.name;
+          }
         }
         claw.phase = 'lifting';
         claw.phaseElapsed = 0;
@@ -248,7 +265,26 @@ export class GameRoom {
         claw.heldCapsuleId = null;
         claw.phase = 'result';
         claw.phaseElapsed = 0;
-        this.turnResults.push({ slot, success: claw.success });
+        const player = this.playerSlots[slot];
+        if (claw.success && claw.prizeName && player) {
+          const win: WinRecord = {
+            wonAt: new Date(this.now()).toISOString(),
+            slot,
+            nickname: player.nickname,
+            prizeName: claw.prizeName,
+          };
+          this.recentWins.unshift(win);
+          this.recentWins.length = Math.min(this.recentWins.length, 5);
+          this.winLog?.record(win);
+          this.turnResults.push({
+            slot,
+            success: true,
+            prizeName: claw.prizeName,
+            win,
+          });
+        } else {
+          this.turnResults.push({ slot, success: false });
+        }
       }
       return;
     }
@@ -294,6 +330,7 @@ export class GameRoom {
       dispenseFromX: PHYSICS_WIDTH / 2,
       dispenseFromZ: PHYSICS_DEPTH / 2,
       success: false,
+      prizeName: null,
     };
   }
 }

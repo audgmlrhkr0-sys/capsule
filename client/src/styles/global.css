@@ -337,6 +337,147 @@ input {
   line-height: 1.45;
 }
 
+.recent-wins-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+  padding: 9px 0 0;
+  overflow: hidden;
+  list-style: none;
+}
+
+.recent-wins-list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  min-height: 0;
+  padding: 6px 4px;
+  border-bottom: 1px solid rgb(23 27 40 / 9%);
+}
+
+.recent-wins-list li > span {
+  color: #c94752;
+  font-family: Georgia, serif;
+  font-size: clamp(12px, 1vw, 18px);
+  font-style: italic;
+}
+
+.recent-wins-list strong,
+.recent-wins-list small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-wins-list strong {
+  font-size: clamp(7px, 0.58vw, 11px);
+}
+
+.recent-wins-list small {
+  margin-top: 2px;
+  color: #85827b;
+  font-size: clamp(6px, 0.48vw, 9px);
+}
+
+.prize-reveal {
+  position: absolute;
+  z-index: 10;
+  inset: 8%;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  border: 1px solid rgb(255 255 255 / 38%);
+  background:
+    radial-gradient(circle, rgb(255 220 116 / 24%), transparent 35%),
+    rgb(7 13 24 / 90%);
+  color: white;
+  text-align: center;
+  animation: reveal-in 250ms ease-out both;
+  backdrop-filter: blur(8px);
+}
+
+.opening-capsule {
+  position: relative;
+  width: clamp(70px, 7vw, 132px);
+  height: clamp(90px, 8vw, 150px);
+  margin-bottom: 8px;
+}
+
+.capsule-half {
+  position: absolute;
+  left: 50%;
+  width: 72%;
+  height: 38%;
+  border: 2px solid rgb(255 255 255 / 70%);
+  background: linear-gradient(140deg, #ff7981, #c43f5b);
+  box-shadow: 0 9px 24px rgb(255 84 103 / 35%);
+}
+
+.capsule-top {
+  top: 8%;
+  border-radius: 999px 999px 12px 12px;
+  animation: capsule-open-top 3s ease-in-out both;
+}
+
+.capsule-bottom {
+  bottom: 8%;
+  border-radius: 12px 12px 999px 999px;
+  animation: capsule-open-bottom 3s ease-in-out both;
+}
+
+.prize-spark {
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  color: #ffe083;
+  font-size: clamp(24px, 3vw, 52px);
+  transform: translate(-50%, -50%);
+  animation: prize-spark 3s ease-in-out both;
+}
+
+.prize-reveal > p {
+  margin: 4px 0;
+  color: #ffe083;
+  font-size: clamp(7px, 0.65vw, 11px);
+  font-weight: 800;
+  letter-spacing: 0.22em;
+}
+
+.prize-reveal h2 {
+  margin: 4px 0;
+  font-family: Georgia, "Noto Serif KR", serif;
+  font-size: clamp(24px, 3vw, 56px);
+  font-weight: 400;
+}
+
+.prize-reveal > strong {
+  font-size: clamp(8px, 0.8vw, 14px);
+  font-weight: 500;
+}
+
+@keyframes reveal-in {
+  from { opacity: 0; transform: scale(0.96); }
+}
+
+@keyframes capsule-open-top {
+  0%, 15% { transform: translate(-50%, 24%) rotate(0); }
+  35%, 100% { transform: translate(-92%, -8%) rotate(-24deg); }
+}
+
+@keyframes capsule-open-bottom {
+  0%, 15% { transform: translate(-50%, -24%) rotate(0); }
+  35%, 100% { transform: translate(-8%, 8%) rotate(24deg); }
+}
+
+@keyframes prize-spark {
+  0%, 18% { opacity: 0; transform: translate(-50%, -50%) scale(0.2); }
+  38%, 86% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0.6; transform: translate(-50%, -50%) scale(0.85); }
+}
+
 .museum-note {
   display: flex;
   justify-content: space-between;
@@ -777,4 +918,61 @@ input {
 
 .orientation-overlay p {
   color: #77746d;
+}
+
+.controller-result {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+  padding:
+    max(20px, env(safe-area-inset-top))
+    max(24px, env(safe-area-inset-right))
+    max(20px, env(safe-area-inset-bottom))
+    max(24px, env(safe-area-inset-left));
+  background:
+    radial-gradient(circle at 50% 40%, rgb(255 211 93 / 18%), transparent 30%),
+    #f3f0e9;
+  color: #171b28;
+  text-align: center;
+  touch-action: none;
+  user-select: none;
+}
+
+.controller-result section {
+  max-width: 700px;
+}
+
+.result-symbol {
+  margin: 1vh 0;
+  color: #d34f5a;
+  font-size: clamp(54px, 16vh, 130px);
+  line-height: 0.9;
+}
+
+.controller-result h1 {
+  margin: 0;
+  font-family: Georgia, "Noto Serif KR", serif;
+  font-size: clamp(36px, 11vh, 88px);
+  font-weight: 400;
+  letter-spacing: -0.045em;
+}
+
+.controller-result section > strong {
+  display: block;
+  margin-top: 1.5vh;
+  color: #c94752;
+  font-size: clamp(14px, 3vh, 24px);
+}
+
+.controller-result section > p:last-child {
+  color: #706e68;
+  font-size: clamp(11px, 2.4vh, 18px);
+  line-height: 1.5;
+}
+
+.result-empty .result-symbol {
+  color: #99958b;
 }

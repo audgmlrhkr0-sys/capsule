@@ -84,7 +84,14 @@ describe('server-authoritative claw turns', () => {
     expect(game.serialize().claws[0]!.phase).toBe('dispensing');
     tickFrames(game, 58);
     expect(game.serialize().claws[0]!.phase).toBe('result');
-    expect(game.drainTurnResults()).toEqual([{ slot: 0, success: true }]);
+    expect(game.drainTurnResults()).toEqual([
+      expect.objectContaining({
+        slot: 0,
+        success: true,
+        prizeName: '캡슐 기념품',
+      }),
+    ]);
+    expect(game.serialize().recentWins[0]?.nickname).toBe('손님');
     expect(game.physics.count).toBe(35);
 
     tickFrames(game, Math.ceil(RESULT_DURATION_MS / FIXED_TIMESTEP_MS) + 1);
