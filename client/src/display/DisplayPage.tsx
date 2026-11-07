@@ -1,4 +1,9 @@
-import type { DisplayJoined, PublicGameState } from '@capsule-claw/shared';
+import type {
+  DisplayJoined,
+  PlayerState,
+  PublicGameState,
+  SlotId,
+} from '@capsule-claw/shared';
 import { QRCodeSVG } from 'qrcode.react';
 import { useEffect, useState } from 'react';
 import { socket } from '../socket/client';
@@ -26,13 +31,33 @@ export function DisplayPage() {
     };
 
     const receiveSnapshot = (state: PublicGameState) => setSnapshot(state);
+    const playerJoined = (player: PlayerState) => {
+      setSnapshot((current) => {
+        if (!current) return current;
+        const players = [...current.players];
+        players[player.slot] = player;
+        return { ...current, players };
+      });
+    };
+    const playerLeft = ({ slot }: { slot: SlotId }) => {
+      setSnapshot((current) => {
+        if (!current) return current;
+        const players = [...current.players];
+        players[slot] = null;
+        return { ...current, players };
+      });
+    };
     socket.on('connect', createOrReconnect);
     socket.on('state:update', receiveSnapshot);
+    socket.on('player:joined', playerJoined);
+    socket.on('player:left', playerLeft);
     socket.connect();
 
     return () => {
       socket.off('connect', createOrReconnect);
       socket.off('state:update', receiveSnapshot);
+      socket.off('player:joined', playerJoined);
+      socket.off('player:left', playerLeft);
       socket.disconnect();
     };
   }, []);
@@ -67,16 +92,22 @@ export function DisplayPage() {
               <span className="machine-caption">SERVER-AUTHORITATIVE PHYSICS / 20 FPS DATA</span>
             </div>
             <div className="player-slots" aria-label="Player slots">
-              {['CRIMSON', 'AZURE', 'MARIGOLD'].map((color, index) => (
-                <article className={`player-slot slot-${index + 1}`} key={color}>
+              {['CRIMSON', 'AZURE', 'MARIGOLD'].map((color, index) => {
+                const player = snapshot?.players[index] ?? null;
+                return (
+                <article
+                  className={`player-slot slot-${index + 1}${player ? ' occupied' : ''}`}
+                  key={color}
+                >
                   <span className="slot-number">0{index + 1}</span>
                   <div>
-                    <strong>WAITING FOR PLAYER</strong>
-                    <small>{color} CLAW</small>
+                    <strong>{player?.nickname ?? 'WAITING FOR PLAYER'}</strong>
+                    <small>{player ? 'PLAYER CONNECTED' : `${color} CLAW`}</small>
                   </div>
                   <span className="waiting-pulse" />
                 </article>
-              ))}
+                );
+              })}
             </div>
           </div>
 

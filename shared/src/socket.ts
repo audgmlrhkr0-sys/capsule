@@ -15,10 +15,9 @@ export interface DisplayJoined {
   reconnected: boolean;
 }
 
-export interface JoinResult {
-  slot: SlotId;
-  sessionToken: string;
-}
+export type JoinResult =
+  | { status: 'joined'; slot: SlotId; sessionToken: string }
+  | { status: 'queued'; position: number; sessionToken: string };
 
 export type AdminCommand = { type: 'stage-placeholder' };
 
@@ -54,4 +53,7 @@ export interface InterServerEvents {}
 export interface SocketData {
   displayToken?: string;
   roomCode?: string;
+  sessionToken?: string;
+  playerSlot?: SlotId;
+  queued?: boolean;
 }

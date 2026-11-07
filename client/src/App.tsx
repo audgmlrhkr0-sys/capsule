@@ -1,4 +1,5 @@
 import { DisplayPage } from './display/DisplayPage';
+import { ControllerPage } from './controller/ControllerPage';
 
 function PlaceholderPage({ title, detail }: { title: string; detail: string }) {
   return (
@@ -17,12 +18,7 @@ export function App() {
     return <DisplayPage />;
   }
   if (/^\/play\/\d{4}$/.test(path)) {
-    return (
-      <PlaceholderPage
-        title="플레이어 연결 준비 중"
-        detail="모바일 컨트롤러는 이후 단계에서 제공됩니다."
-      />
-    );
+    return <ControllerPage roomCode={path.slice(-4)} />;
   }
   if (path === '/admin') {
     return (
