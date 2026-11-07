@@ -1,10 +1,10 @@
 import type { AdminAuthStatus } from '@capsule-claw/shared';
 import { useEffect, useState } from 'react';
 import { AdminDashboard } from './AdminDashboard';
+import { SERVER_URL } from '../socket/serverUrl';
 import { AdminLogin } from './AdminLogin';
 
-export const ADMIN_API =
-  `${import.meta.env.VITE_SERVER_URL ?? 'http://localhost:3000'}/api/admin`;
+export const ADMIN_API = `${SERVER_URL}/api/admin`;
 
 export function AdminPage() {
   const [auth, setAuth] = useState<AdminAuthStatus | null>(null);

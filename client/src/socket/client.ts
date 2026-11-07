@@ -3,8 +3,9 @@ import type {
   ServerToClientEvents,
 } from '@capsule-claw/shared';
 import { io, type Socket } from 'socket.io-client';
+import { SERVER_URL } from './serverUrl';
 
 export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(
-  import.meta.env.VITE_SERVER_URL ?? 'http://localhost:3000',
+  SERVER_URL,
   { autoConnect: false },
 );

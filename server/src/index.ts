@@ -6,7 +6,9 @@ import type {
 } from '@capsule-claw/shared';
 import cors from 'cors';
 import express from 'express';
+import { existsSync } from 'node:fs';
 import { createServer } from 'node:http';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Server } from 'socket.io';
 import { config } from './config.js';
@@ -57,6 +59,18 @@ app.use(
     secureCookies: config.production,
   }),
 );
+const clientDist = fileURLToPath(new URL('../../client/dist', import.meta.url));
+if (existsSync(clientDist)) {
+  app.use(express.static(clientDist));
+  app.use((request, response, next) => {
+    if (request.method !== 'GET' || request.path.startsWith('/api/')) {
+      next();
+      return;
+    }
+    response.sendFile(path.join(clientDist, 'index.html'));
+  });
+}
+
 registerHandlers(io, rooms);
 const stopStateLoop = startStateLoop(io, rooms);
 
