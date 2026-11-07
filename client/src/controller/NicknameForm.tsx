@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { canEnterFullscreen, enterLandscapeFullscreen } from '../hooks/useOrientation';
 
 function suggestedNickname(): string {
   return `관람객${Math.floor(Math.random() * 90) + 1}`;
@@ -19,6 +20,9 @@ export function NicknameForm({
     event.preventDefault();
     const trimmed = nickname.trim();
     if (trimmed && Array.from(trimmed).length <= 6) {
+      if (canEnterFullscreen()) {
+        void enterLandscapeFullscreen();
+      }
       onJoin(trimmed);
     }
   };

@@ -4,7 +4,6 @@ import {
   BALL_RADIUS,
   CAPSULE_COLORS,
   CAPSULE_RADIUS,
-  CHUTE_LEFT,
   DEPTH_LAYERS,
   FILLER_BALL_COUNT,
   INITIAL_CAPSULE_COUNT,
@@ -21,7 +20,7 @@ interface PhysicsBody {
 }
 
 const WALL_THICKNESS = 80;
-const SPAWN_COLUMNS = 8;
+const SPAWN_COLUMNS = 10;
 const WALL_CATEGORY = 0x0001;
 
 export class CapsulePhysics {
@@ -51,9 +50,9 @@ export class CapsulePhysics {
         wallOptions,
       ),
       Matter.Bodies.rectangle(
-        (CHUTE_LEFT + PHYSICS_WIDTH + WALL_THICKNESS) / 2,
+        PHYSICS_WIDTH + WALL_THICKNESS / 2,
         PHYSICS_HEIGHT / 2,
-        PHYSICS_WIDTH + WALL_THICKNESS - CHUTE_LEFT,
+        WALL_THICKNESS,
         PHYSICS_HEIGHT * 2,
         wallOptions,
       ),
@@ -168,7 +167,7 @@ export class CapsulePhysics {
     const layerIndex = Math.floor(slot / DEPTH_LAYERS.length);
     const column = layerIndex % SPAWN_COLUMNS;
     const row = Math.floor(layerIndex / SPAWN_COLUMNS);
-    const x = 80 + column * 125 + (this.random() - 0.5) * 12;
+    const x = 80 + column * 115 + (this.random() - 0.5) * 12;
     const y = 50 + row * 90 + (this.random() - 0.5) * 8;
     const category = WALL_CATEGORY << (layer + 1);
     const body = Matter.Bodies.circle(x, y, radius, {

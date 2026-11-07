@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { CapsulePhysics } from './CapsulePhysics.js';
 import {
-  CHUTE_LEFT,
   FILLER_BALL_COUNT,
   FIXED_TIMESTEP_MS,
   INITIAL_CAPSULE_COUNT,
   PHYSICS_HEIGHT,
+  PHYSICS_WIDTH,
 } from './constants.js';
 import { GameRoom } from './GameRoom.js';
 
@@ -51,7 +51,7 @@ describe('CapsulePhysics', () => {
     expect(
       physics
         .serialize()
-        .every((capsule) => capsule.y < PHYSICS_HEIGHT && capsule.x < CHUTE_LEFT),
+        .every((capsule) => capsule.y < PHYSICS_HEIGHT && capsule.x < PHYSICS_WIDTH),
     ).toBe(true);
   });
 

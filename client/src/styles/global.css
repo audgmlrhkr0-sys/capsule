@@ -58,8 +58,8 @@ input {
   overflow: hidden;
   padding: clamp(12px, 1.3vw, 26px);
   background:
-    radial-gradient(circle at 50% -20%, rgb(255 194 197 / 18%), transparent 45%),
-    linear-gradient(180deg, #477828, var(--green) 40%, var(--green-deep));
+    radial-gradient(circle at 50% -20%, rgb(255 194 197 / 22%), transparent 45%),
+    linear-gradient(180deg, #d8687c, #c4506a 45%, #a83d58);
   user-select: none;
 }
 
@@ -172,8 +172,8 @@ input {
   min-width: 0;
   padding: clamp(8px, 0.75vw, 14px) clamp(12px, 1.1vw, 22px);
   border-radius: 999px;
-  background: rgb(33 58 17 / 72%);
-  color: rgb(255 194 197 / 55%);
+  background: var(--green-dark);
+  color: rgb(255 194 197 / 60%);
   box-shadow: inset 0 0 0 2px rgb(255 194 197 / 12%);
   transition: background 200ms ease, color 200ms ease, box-shadow 200ms ease;
 }

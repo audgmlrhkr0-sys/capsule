@@ -8,10 +8,6 @@ import type {
 const WORLD_WIDTH = 1200;
 const WORLD_HEIGHT = 620;
 const WORLD_DEPTH = 620;
-// Must match CHUTE_LEFT / OUTLET_Z in server/src/game/constants.ts.
-const CHUTE_LEFT = 1030;
-const CHUTE_FRONT_DEPTH = 420;
-const CHUTE_TOP = 350;
 const RAIL_Y = 18;
 const CLAW_HEAD_OFFSET = 138;
 const BACK_SCALE_RATIO = 0.72;
@@ -97,7 +93,6 @@ export function renderMachine(
   if (state) {
     drawContents(context, room, state);
   }
-  drawChute(context, room);
   drawGlass(context, width, height);
 }
 
@@ -634,45 +629,6 @@ function drawPearlBall(
   context.beginPath();
   context.ellipse(-radius * 0.34, -radius * 0.44, radius * 0.26, radius * 0.13, -0.6, 0, Math.PI * 2);
   context.fill();
-}
-
-function drawChute(context: CanvasRenderingContext2D, room: Room): void {
-  const front = [
-    project(room, CHUTE_LEFT, CHUTE_TOP, WORLD_DEPTH),
-    project(room, WORLD_WIDTH, CHUTE_TOP, WORLD_DEPTH),
-    project(room, WORLD_WIDTH, WORLD_HEIGHT, WORLD_DEPTH),
-    project(room, CHUTE_LEFT, WORLD_HEIGHT, WORLD_DEPTH),
-  ];
-  const backTopLeft = project(room, CHUTE_LEFT, CHUTE_TOP, CHUTE_FRONT_DEPTH);
-  const backTopRight = project(room, WORLD_WIDTH, CHUTE_TOP, CHUTE_FRONT_DEPTH);
-  const backBottomLeft = project(room, CHUTE_LEFT, WORLD_HEIGHT, CHUTE_FRONT_DEPTH);
-
-  context.save();
-  context.fillStyle = 'rgb(255 255 255 / 22%)';
-  polygon(context, [
-    [backTopLeft.x, backTopLeft.y],
-    [backTopRight.x, backTopRight.y],
-    [front[1]!.x, front[1]!.y],
-    [front[0]!.x, front[0]!.y],
-  ]);
-  context.fill();
-
-  context.fillStyle = 'rgb(255 255 255 / 16%)';
-  polygon(context, [
-    [backTopLeft.x, backTopLeft.y],
-    [front[0]!.x, front[0]!.y],
-    [front[3]!.x, front[3]!.y],
-    [backBottomLeft.x, backBottomLeft.y],
-  ]);
-  context.fill();
-
-  const glass = context.createLinearGradient(front[0]!.x, 0, front[1]!.x, 0);
-  glass.addColorStop(0, 'rgb(255 255 255 / 34%)');
-  glass.addColorStop(1, 'rgb(255 255 255 / 14%)');
-  context.fillStyle = glass;
-  polygon(context, front.map(({ x, y }) => [x, y] as const));
-  context.fill();
-  context.restore();
 }
 
 function drawGlass(context: CanvasRenderingContext2D, width: number, height: number): void {

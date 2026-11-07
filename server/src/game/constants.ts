@@ -6,13 +6,12 @@ export const PHYSICS_DEPTH = 620;
 export const CAPSULE_RADIUS = 42;
 export const INITIAL_CAPSULE_COUNT = 40;
 export const BALL_RADIUS = 38;
-export const FILLER_BALL_COUNT = 60;
+export const FILLER_BALL_COUNT = 75;
 export const DEPTH_LAYERS: ReadonlyArray<readonly [number, number]> = [
   [40, 200],
   [220, 380],
   [400, 580],
 ];
-export const CHUTE_LEFT = 1030;
 export const CLAW_GRAB_RADIUS = 2 * CAPSULE_RADIUS * 1.2;
 export const HELD_CAPSULE_OFFSET = 180;
 export const FIXED_TIMESTEP_MS = 1000 / 60;
@@ -32,8 +31,8 @@ export const DISCONNECT_GRACE_MS = 10_000;
 export const COOLDOWN_DURATION_MS = 10_000;
 export const IDLE_TIMEOUT_MS = 60_000;
 export const REFILL_THRESHOLD = 5;
-export const OUTLET_X = (CHUTE_LEFT + PHYSICS_WIDTH) / 2;
-export const OUTLET_Z = PHYSICS_DEPTH - 110;
+export const OUTLET_X = CLAW_X_MAX;
+export const OUTLET_Z = CLAW_Z_MAX;
 
 export const CAPSULE_COLORS: readonly CapsuleColor[] = [
   'coral',
