@@ -24,6 +24,13 @@ export function usePortrait(): boolean {
   return portrait;
 }
 
+export function needsHomeScreenForFullscreen(): boolean {
+  const standalone =
+    (navigator as Navigator & { standalone?: boolean }).standalone === true ||
+    window.matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches;
+  return /iPhone|iPod/.test(navigator.userAgent) && !standalone;
+}
+
 export async function enterLandscapeFullscreen(): Promise<void> {
   const root = document.documentElement as FullscreenTarget;
   if (!isFullscreen()) {

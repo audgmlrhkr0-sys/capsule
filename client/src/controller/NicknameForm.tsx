@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { usePortrait } from '../hooks/useOrientation';
+import { needsHomeScreenForFullscreen, usePortrait } from '../hooks/useOrientation';
 import { OrientationOverlay } from './OrientationOverlay';
 
 function suggestedNickname(): string {
@@ -49,6 +49,11 @@ export function NicknameForm({
           <span>입장하기</span>
         </button>
         {error && <p className="join-error">{error}</p>}
+        {needsHomeScreenForFullscreen() && (
+          <p className="join-hint">
+            전체화면: 공유 버튼 → ‘홈 화면에 추가’ 후 아이콘으로 열기
+          </p>
+        )}
       </form>
     </main>
   );

@@ -817,10 +817,17 @@ input {
   filter: grayscale(0.85);
 }
 
-.join-form .join-error {
+.join-form .join-error,
+.join-hint {
   flex-basis: 100%;
   margin: 0;
   text-align: center;
+}
+
+.join-hint {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .rotate-phone {

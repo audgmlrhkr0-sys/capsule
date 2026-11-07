@@ -1,0 +1,8 @@
+{
+  "name": "경북대미술관 소장품 캡슐 뽑기",
+  "short_name": "캡슐 뽑기",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#e4e7ea",
+  "theme_color": "#3f6b22"
+}
