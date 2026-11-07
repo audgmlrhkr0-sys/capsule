@@ -1,0 +1,21 @@
+{
+  "name": "capsule-claw",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "npm run build -w @capsule-claw/shared && concurrently -n shared,server,client -c yellow,blue,green \"npm run dev -w @capsule-claw/shared\" \"npm run dev -w @capsule-claw/server\" \"npm run dev -w @capsule-claw/client\"",
+    "build": "npm run build -w @capsule-claw/shared && npm run build -w @capsule-claw/server && npm run build -w @capsule-claw/client",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run build -w @capsule-claw/shared && npm run test -w @capsule-claw/server",
+    "start": "npm run start -w @capsule-claw/server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "typescript": "^5.9.3"
+  }
+}
