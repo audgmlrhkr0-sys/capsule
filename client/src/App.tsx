@@ -1,5 +1,6 @@
 import { DisplayPage } from './display/DisplayPage';
 import { ControllerPage } from './controller/ControllerPage';
+import { AdminPage } from './admin/AdminPage';
 
 function PlaceholderPage({ title, detail }: { title: string; detail: string }) {
   return (
@@ -21,12 +22,7 @@ export function App() {
     return <ControllerPage roomCode={path.slice(-4)} />;
   }
   if (path === '/admin') {
-    return (
-      <PlaceholderPage
-        title="관리자 화면 준비 중"
-        detail="관리 기능은 이후 단계에서 제공됩니다."
-      />
-    );
+    return <AdminPage />;
   }
   return (
     <PlaceholderPage

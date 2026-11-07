@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { DisplayJoined } from '@capsule-claw/shared';
+import type { AdminSnapshot, DisplayJoined } from '@capsule-claw/shared';
 import { generateRoomCode, type RandomInteger } from '../utils/roomCode.js';
 import type { WinLogStore } from '../logging/WinLogStore.js';
 import { PrizeService } from '../prizes/PrizeService.js';
@@ -9,6 +9,7 @@ interface DisplayRoom {
   roomCode: string;
   displayToken: string;
   game: GameRoom;
+  displaySockets: Set<string>;
 }
 
 export class RoomManager {
@@ -45,6 +46,7 @@ export class RoomManager {
         this.prizes,
         this.winLog,
       ),
+      displaySockets: new Set(),
     };
     this.roomsByCode.set(room.roomCode, room);
     this.roomsByToken.set(room.displayToken, room);
@@ -61,6 +63,63 @@ export class RoomManager {
 
   games(): IterableIterator<GameRoom> {
     return [...this.roomsByCode.values()].map((room) => room.game).values();
+  }
+
+  connectDisplay(roomCode: string, socketId: string): void {
+    this.roomsByCode.get(roomCode)?.displaySockets.add(socketId);
+  }
+
+  disconnectDisplay(roomCode: string, socketId: string): void {
+    this.roomsByCode.get(roomCode)?.displaySockets.delete(socketId);
+  }
+
+  adminSnapshot(): AdminSnapshot {
+    const rooms = [...this.roomsByCode.values()];
+    const stats = rooms.map((room) => room.game.adminStats());
+    return {
+      connectedControllerCount: stats.reduce(
+        (sum, room) => sum + room.connectedControllers,
+        0,
+      ),
+      displayCount: rooms.reduce(
+        (sum, room) => sum + room.displaySockets.size,
+        0,
+      ),
+      roomCount: rooms.length,
+      queueCount: stats.reduce((sum, room) => sum + room.queueCount, 0),
+      totalCompletedPlays: stats.reduce(
+        (sum, room) => sum + room.completedPlays,
+        0,
+      ),
+      prizes: this.prizes.adminSnapshot(),
+      players: rooms.flatMap((room) => room.game.adminPlayers()),
+      rooms: rooms.map((room) => ({
+        roomCode: room.roomCode,
+        connectedDisplays: room.displaySockets.size,
+        queueCount: room.game.adminStats().queueCount,
+        capsuleCount: room.game.physics.count,
+      })),
+    };
+  }
+
+  adminReset(resetStats: boolean): void {
+    for (const room of this.roomsByCode.values()) {
+      room.game.adminReset(resetStats);
+    }
+    this.prizes.resetStock();
+  }
+
+  adminRefill(roomCode: string): boolean | null {
+    const game = this.roomsByCode.get(roomCode)?.game;
+    return game ? game.refillCapsules(true) : null;
+  }
+
+  adminKick(roomCode: string, sessionToken: string, reason: string): boolean {
+    return (
+      this.roomsByCode
+        .get(roomCode)
+        ?.game.adminKick(sessionToken, reason) ?? false
+    );
   }
 
   private allocateRoomCode(): string {

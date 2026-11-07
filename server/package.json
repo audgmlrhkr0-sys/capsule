@@ -23,6 +23,8 @@
     "@types/express": "^5.0.5",
     "@types/matter-js": "^0.20.2",
     "@types/node": "^24.10.0",
+    "@types/supertest": "^6.0.3",
+    "supertest": "^7.1.4",
     "tsx": "^4.20.6",
     "vitest": "^4.0.7"
   }

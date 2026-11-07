@@ -10,6 +10,7 @@ import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import { Server } from 'socket.io';
 import { config } from './config.js';
+import { createAdminRouter } from './admin/adminRoutes.js';
 import { RoomManager } from './game/RoomManager.js';
 import { startStateLoop } from './game/stateLoop.js';
 import { WinLogStore } from './logging/WinLogStore.js';
@@ -17,7 +18,7 @@ import { PrizeService } from './prizes/PrizeService.js';
 import { registerHandlers } from './socket/registerHandlers.js';
 
 const app = express();
-app.use(cors({ origin: config.clientOrigin }));
+app.use(cors({ origin: config.clientOrigin, credentials: true }));
 app.use(express.json());
 app.get('/health', (_request, response) => {
   response.json({ ok: true });
@@ -45,6 +46,16 @@ const rooms = new RoomManager(
   undefined,
   prizes,
   winLog,
+);
+app.use(
+  '/api/admin',
+  createAdminRouter({
+    rooms,
+    winLog,
+    password: config.adminPassword,
+    clientOrigin: config.clientOrigin,
+    secureCookies: config.production,
+  }),
 );
 registerHandlers(io, rooms);
 const stopStateLoop = startStateLoop(io, rooms);

@@ -1,14 +1,18 @@
-import type { PrizeConfig } from '@capsule-claw/shared';
+import type { AdminPrizeStock, PrizeConfig } from '@capsule-claw/shared';
 import { readFile } from 'node:fs/promises';
 
 export class PrizeService {
   private readonly prizes: PrizeConfig[];
+  private readonly initialStock = new Map<string, number>();
 
   constructor(
     config: PrizeConfig[],
     private readonly random: () => number = Math.random,
   ) {
     this.prizes = validatePrizeConfig(config).map((prize) => ({ ...prize }));
+    for (const prize of this.prizes) {
+      this.initialStock.set(prize.id, prize.stock);
+    }
   }
 
   static async fromFile(
@@ -48,6 +52,25 @@ export class PrizeService {
 
   snapshot(): PrizeConfig[] {
     return this.prizes.map((prize) => ({ ...prize }));
+  }
+
+  adminSnapshot(): AdminPrizeStock[] {
+    return this.prizes.map((prize) => {
+      const initial = this.initialStock.get(prize.id) ?? prize.stock;
+      return {
+        id: prize.id,
+        name: prize.name,
+        initial,
+        remaining: prize.stock,
+        used: initial - prize.stock,
+      };
+    });
+  }
+
+  resetStock(): void {
+    for (const prize of this.prizes) {
+      prize.stock = this.initialStock.get(prize.id) ?? prize.stock;
+    }
   }
 }
 

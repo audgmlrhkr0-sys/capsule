@@ -92,6 +92,7 @@ describe('server-authoritative claw turns', () => {
       }),
     ]);
     expect(game.serialize().recentWins[0]?.nickname).toBe('손님');
+    expect(game.adminStats().completedPlays).toBe(1);
     expect(game.physics.count).toBe(35);
 
     tickFrames(game, Math.ceil(RESULT_DURATION_MS / FIXED_TIMESTEP_MS) + 1);

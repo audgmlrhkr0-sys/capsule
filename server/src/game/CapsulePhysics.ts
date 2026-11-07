@@ -67,6 +67,15 @@ export class CapsulePhysics {
     }
   }
 
+  reset(): void {
+    for (const capsule of this.capsules.values()) {
+      Matter.Composite.remove(this.engine.world, capsule.body);
+    }
+    this.capsules.clear();
+    this.nextId = 1;
+    this.refill();
+  }
+
   removeCapsule(id: string): boolean {
     const capsule = this.capsules.get(id);
     if (!capsule) {

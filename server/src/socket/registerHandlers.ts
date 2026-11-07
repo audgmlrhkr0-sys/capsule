@@ -22,6 +22,7 @@ export function registerHandlers(io: TypedServer, rooms: RoomManager): void {
         const display = rooms.createOrReconnect(payload.displayToken);
         socket.data.displayToken = display.displayToken;
         socket.data.roomCode = display.roomCode;
+        rooms.connectDisplay(display.roomCode, socket.id);
         void socket.join(`room:${display.roomCode}`);
         void socket.join(`display:${display.roomCode}`);
         ack({ ok: true, data: display });
@@ -119,7 +120,10 @@ export function registerHandlers(io: TypedServer, rooms: RoomManager): void {
     });
 
     socket.on('disconnect', () => {
-      const { roomCode, sessionToken } = socket.data;
+      const { roomCode, sessionToken, displayToken } = socket.data;
+      if (roomCode && displayToken) {
+        rooms.disconnectDisplay(roomCode, socket.id);
+      }
       if (!roomCode || !sessionToken) {
         return;
       }

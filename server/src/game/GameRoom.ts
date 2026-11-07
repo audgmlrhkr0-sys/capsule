@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type {
+  AdminPlayer,
   CapsuleState,
   ClawState,
   Direction,
@@ -101,6 +102,7 @@ export class GameRoom {
   private readonly turnResults: TurnResultEvent[] = [];
   private readonly lifecycleEvents: LifecycleEvent[] = [];
   private readonly recentWins: WinRecord[] = [];
+  private completedPlays = 0;
 
   constructor(
     readonly roomCode: string,
@@ -322,6 +324,74 @@ export class GameRoom {
     return true;
   }
 
+  adminPlayers(): AdminPlayer[] {
+    return [...this.sessions.values()].map((session) => ({
+      id: session.sessionToken,
+      roomCode: this.roomCode,
+      slot: session.slot ?? null,
+      nickname: session.nickname,
+      state: session.state,
+      connected: session.connectedSocketId !== null,
+    }));
+  }
+
+  adminStats(): {
+    connectedControllers: number;
+    queueCount: number;
+    completedPlays: number;
+  } {
+    return {
+      connectedControllers: [...this.sessions.values()].filter(
+        (session) => session.connectedSocketId !== null,
+      ).length,
+      queueCount: this.queue.length,
+      completedPlays: this.completedPlays,
+    };
+  }
+
+  adminKick(sessionToken: string, reason: string): boolean {
+    const session = this.sessions.get(sessionToken);
+    if (!session) return false;
+    if (session.connectedSocketId) {
+      this.lifecycleEvents.push({
+        type: 'kicked',
+        sessionToken,
+        reason,
+      });
+    }
+    this.removeSession(sessionToken, false);
+    return true;
+  }
+
+  adminReset(resetStats: boolean): void {
+    this.turnResults.length = 0;
+    this.lifecycleEvents.length = 0;
+    for (const session of this.sessions.values()) {
+      if (session.connectedSocketId) {
+        this.lifecycleEvents.push({
+          type: 'kicked',
+          sessionToken: session.sessionToken,
+          reason: '관리자가 게임을 초기화했습니다.',
+        });
+      }
+    }
+    for (const slot of [0, 1, 2] as const) {
+      if (this.playerSlots[slot]) {
+        this.lifecycleEvents.push({ type: 'player:left', slot });
+      }
+      this.playerSlots[slot] = null;
+      this.claws[slot] = this.createWaitingClaw(slot);
+    }
+    this.sessions.clear();
+    this.queue.length = 0;
+    this.heldCapsules.clear();
+    this.physics.reset();
+    if (resetStats) {
+      this.completedPlays = 0;
+      this.recentWins.length = 0;
+    }
+  }
+
   serialize(): PublicGameState {
     return {
       roomCode: this.roomCode,
@@ -408,6 +478,7 @@ export class GameRoom {
         if (!session) {
           return;
         }
+        this.completedPlays += 1;
         if (claw.success && claw.prizeName && player) {
           const win: WinRecord = {
             wonAt: new Date(this.now()).toISOString(),

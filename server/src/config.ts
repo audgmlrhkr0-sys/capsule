@@ -8,8 +8,20 @@ function readPort(value: string | undefined): number {
   return port;
 }
 
+function readAdminPassword(value: string | undefined): string {
+  if (value && value.length >= 8) {
+    return value;
+  }
+  if (process.env.NODE_ENV === 'test') {
+    return 'test-admin-password';
+  }
+  throw new Error('ADMIN_PASSWORD is required and must be at least 8 characters');
+}
+
 export const config = {
   port: readPort(process.env.PORT),
   publicUrl: (process.env.PUBLIC_URL ?? 'http://localhost:5173').replace(/\/+$/, ''),
   clientOrigin: process.env.CLIENT_ORIGIN ?? 'http://localhost:5173',
+  adminPassword: readAdminPassword(process.env.ADMIN_PASSWORD),
+  production: process.env.NODE_ENV === 'production',
 };
