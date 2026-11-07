@@ -724,42 +724,103 @@ input {
   touch-action: none;
 }
 
-.fullscreen-button {
+.join-page {
   display: grid;
-  justify-items: center;
-  gap: 12px;
-  min-width: 200px;
-  padding: 28px 44px 24px;
+  place-items: center;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  padding:
+    max(16px, env(safe-area-inset-top))
+    max(24px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom))
+    max(24px, env(safe-area-inset-left));
+  background:
+    radial-gradient(ellipse at 50% 0%, #ffffff, transparent 60%),
+    linear-gradient(180deg, #eceef0, #d3d7da);
+  overscroll-behavior: none;
+}
+
+.join-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: center;
+  gap: clamp(16px, 4vw, 36px);
+  width: min(100%, 720px);
+}
+
+.join-name {
+  display: grid;
+  flex: 1 1 240px;
+  gap: 8px;
+}
+
+.join-name span {
+  padding-left: 6px;
+  color: var(--green);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.join-name input {
+  width: 100%;
+  min-height: clamp(56px, 18vh, 76px);
+  padding: 0 20px;
   border: 0;
-  border-radius: 32px;
+  border-radius: 20px;
+  outline: none;
+  background: linear-gradient(180deg, #dfe2e5, #f7f8f9 30%);
+  box-shadow:
+    inset 0 4px 8px rgb(55 64 72 / 22%),
+    0 2px 0 #ffffff;
+  color: var(--green-deep);
+  font-size: clamp(22px, 7vh, 30px);
+  font-weight: 900;
+  user-select: text;
+}
+
+.join-name input:focus {
+  box-shadow:
+    inset 0 4px 8px rgb(55 64 72 / 22%),
+    0 0 0 3px var(--green);
+}
+
+.join-button {
+  flex: 0 0 auto;
+  min-width: clamp(180px, 30vw, 240px);
+  min-height: clamp(56px, 18vh, 76px);
+  padding: 0 32px;
+  border: 0;
+  border-radius: 999px;
   background: linear-gradient(180deg, #ffe0e2, var(--pink));
   color: var(--green-deep);
-  font-size: 24px;
+  font-size: clamp(22px, 7vh, 30px);
   font-weight: 900;
   box-shadow:
-    0 10px 0 #d36f7c,
-    0 20px 28px rgb(55 64 72 / 28%),
+    0 9px 0 #d36f7c,
+    0 18px 24px rgb(55 64 72 / 26%),
     inset 0 2px 0 rgb(255 255 255 / 80%);
   cursor: pointer;
   transition: transform 60ms ease, box-shadow 60ms ease;
 }
 
-.fullscreen-button:active {
+.join-button:active:not(:disabled) {
   box-shadow:
     0 2px 0 #d36f7c,
     0 6px 10px rgb(55 64 72 / 22%),
     inset 0 3px 8px rgb(150 50 70 / 18%);
-  transform: translateY(8px);
+  transform: translateY(7px);
 }
 
-.fullscreen-button svg {
-  width: 64px;
-  height: 64px;
-  fill: none;
-  stroke: var(--green);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 2.6;
+.join-button:disabled {
+  filter: grayscale(0.85);
+}
+
+.join-form .join-error {
+  flex-basis: 100%;
+  margin: 0;
+  text-align: center;
 }
 
 .rotate-phone {

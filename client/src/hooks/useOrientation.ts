@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 
 type FullscreenDocument = Document & {
-  webkitFullscreenEnabled?: boolean;
   webkitFullscreenElement?: Element | null;
 };
 
@@ -25,40 +24,21 @@ export function usePortrait(): boolean {
   return portrait;
 }
 
-export function useFullscreen(): boolean {
-  const [fullscreen, setFullscreen] = useState(isFullscreen);
-
-  useEffect(() => {
-    const update = () => setFullscreen(isFullscreen());
-    document.addEventListener('fullscreenchange', update);
-    document.addEventListener('webkitfullscreenchange', update);
-    return () => {
-      document.removeEventListener('fullscreenchange', update);
-      document.removeEventListener('webkitfullscreenchange', update);
-    };
-  }, []);
-
-  return fullscreen;
-}
-
-export function canEnterFullscreen(): boolean {
-  const fullscreenDocument = document as FullscreenDocument;
-  return Boolean(
-    fullscreenDocument.fullscreenEnabled || fullscreenDocument.webkitFullscreenEnabled,
-  );
-}
-
 export async function enterLandscapeFullscreen(): Promise<void> {
   const root = document.documentElement as FullscreenTarget;
   if (!isFullscreen()) {
     try {
       if (root.requestFullscreen) {
-        await root.requestFullscreen({ navigationUI: 'hide' });
+        await root.requestFullscreen();
       } else {
         await root.webkitRequestFullscreen?.();
       }
     } catch {
-      // Fullscreen can be refused; the rotate prompt remains as the fallback.
+      try {
+        await root.webkitRequestFullscreen?.();
+      } catch {
+        // Fullscreen is unavailable (iPhone Safari, in-app browsers); play continues windowed.
+      }
     }
   }
   await requestLandscape();

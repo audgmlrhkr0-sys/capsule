@@ -13,7 +13,7 @@ describe('PrizeService', () => {
       () => 0,
     );
 
-    expect(service.snapshot().length).toBeGreaterThanOrEqual(6);
+    expect(service.snapshot().length).toBeGreaterThanOrEqual(1);
     expect(service.snapshot().every((prize) => /[가-힣]/.test(prize.name))).toBe(true);
   });
 

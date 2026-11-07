@@ -11,7 +11,7 @@ import {
   getPlayerSession,
   savePlayerSession,
 } from '../hooks/useAnonymousSession';
-import { requestLandscape } from '../hooks/useOrientation';
+import { enterLandscapeFullscreen } from '../hooks/useOrientation';
 import { socket } from '../socket/client';
 import { LandscapeControls } from './LandscapeControls';
 import { NicknameForm } from './NicknameForm';
@@ -182,7 +182,7 @@ export function ControllerPage({ roomCode }: { roomCode: string }) {
     setNickname(name);
     nicknameRef.current = name;
     setError(null);
-    void requestLandscape();
+    void enterLandscapeFullscreen();
     if (socket.connected) {
       emitJoin(name);
     } else {
@@ -227,5 +227,5 @@ export function ControllerPage({ roomCode }: { roomCode: string }) {
     );
   }
 
-  return <NicknameForm roomCode={roomCode} error={error} onJoin={join} />;
+  return <NicknameForm error={error} onJoin={join} />;
 }
