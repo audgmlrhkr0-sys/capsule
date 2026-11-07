@@ -8,11 +8,13 @@ import type {
 import { QRCodeSVG } from 'qrcode.react';
 import { useEffect, useState } from 'react';
 import { socket } from '../socket/client';
+import { SERVER_URL } from '../socket/serverUrl';
 import { GameCanvas } from './GameCanvas';
 import { PrizeReveal } from './PrizeReveal';
 
 const DISPLAY_TOKEN_KEY = 'capsule-claw:display-token';
 const TITLE = '경북대미술관 소장품 캡슐 뽑기';
+const KEEP_AWAKE_INTERVAL_MS = 5 * 60_000;
 
 export function DisplayPage() {
   const [display, setDisplay] = useState<DisplayJoined | null>(null);
@@ -67,6 +69,14 @@ export function DisplayPage() {
       socket.off('prize:won', prizeWon);
       socket.disconnect();
     };
+  }, []);
+
+  useEffect(() => {
+    // Free hosting sleeps after 15 idle minutes; WebSocket frames may not count as traffic.
+    const timer = window.setInterval(() => {
+      void fetch(`${SERVER_URL}/health`, { cache: 'no-store' }).catch(() => undefined);
+    }, KEEP_AWAKE_INTERVAL_MS);
+    return () => window.clearInterval(timer);
   }, []);
 
   useEffect(() => {
