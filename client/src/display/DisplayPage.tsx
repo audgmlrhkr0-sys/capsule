@@ -1,12 +1,14 @@
-import type { DisplayJoined } from '@capsule-claw/shared';
+import type { DisplayJoined, PublicGameState } from '@capsule-claw/shared';
 import { QRCodeSVG } from 'qrcode.react';
 import { useEffect, useState } from 'react';
 import { socket } from '../socket/client';
+import { GameCanvas } from './GameCanvas';
 
 const DISPLAY_TOKEN_KEY = 'capsule-claw:display-token';
 
 export function DisplayPage() {
   const [display, setDisplay] = useState<DisplayJoined | null>(null);
+  const [snapshot, setSnapshot] = useState<PublicGameState | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -23,11 +25,14 @@ export function DisplayPage() {
       });
     };
 
+    const receiveSnapshot = (state: PublicGameState) => setSnapshot(state);
     socket.on('connect', createOrReconnect);
+    socket.on('state:update', receiveSnapshot);
     socket.connect();
 
     return () => {
       socket.off('connect', createOrReconnect);
+      socket.off('state:update', receiveSnapshot);
       socket.disconnect();
     };
   }, []);
@@ -42,20 +47,66 @@ export function DisplayPage() {
 
   return (
     <main className="display-page">
-      <section className="stage-placeholder" aria-label="Game stage placeholder">
-        <span>CAPSULE CLAW</span>
-        <h1>게임 화면 준비 중</h1>
-        <p>캡슐 물리와 플레이 화면은 다음 단계에서 추가됩니다.</p>
-      </section>
-      <aside className="room-panel">
-        <p className="eyebrow">휴대폰으로 참여하세요</p>
-        <div className="qr-frame">
-          <QRCodeSVG value={display.playUrl} size={220} level="M" />
-        </div>
-        <p className="room-label">ROOM</p>
-        <strong className="room-code">{display.roomCode}</strong>
-        <p className="play-url">{display.playUrl}</p>
-      </aside>
+      <div className="display-shell">
+        <header className="museum-header">
+          <div>
+            <p className="museum-kicker">THE PLAYFUL OBJECTS COLLECTION</p>
+            <h1>CAPSULE <i>CLAW</i></h1>
+            <p className="museum-subtitle">Interactive capsule study · No. 036</p>
+          </div>
+          <div className="connection-status">
+            <span className={snapshot ? 'status-dot online' : 'status-dot'} />
+            {snapshot ? 'LIVE SIMULATION' : 'CONNECTING'}
+          </div>
+        </header>
+
+        <section className="exhibit-grid">
+          <div className="machine-column">
+            <div className="machine-frame">
+              <GameCanvas snapshot={snapshot} />
+              <span className="machine-caption">SERVER-AUTHORITATIVE PHYSICS / 20 FPS DATA</span>
+            </div>
+            <div className="player-slots" aria-label="Player slots">
+              {['CRIMSON', 'AZURE', 'MARIGOLD'].map((color, index) => (
+                <article className={`player-slot slot-${index + 1}`} key={color}>
+                  <span className="slot-number">0{index + 1}</span>
+                  <div>
+                    <strong>WAITING FOR PLAYER</strong>
+                    <small>{color} CLAW</small>
+                  </div>
+                  <span className="waiting-pulse" />
+                </article>
+              ))}
+            </div>
+          </div>
+
+          <aside className="display-sidebar">
+            <section className="room-panel">
+              <p className="eyebrow">SCAN TO PLAY</p>
+              <div className="qr-frame">
+                <QRCodeSVG value={display.playUrl} size={174} level="M" />
+              </div>
+              <p className="room-label">ROOM CODE</p>
+              <strong className="room-code">{display.roomCode}</strong>
+              <p className="play-url">{display.playUrl}</p>
+            </section>
+            <section className="recent-panel">
+              <div className="panel-heading">
+                <span>RECENT ACQUISITIONS</span>
+                <small>LIVE</small>
+              </div>
+              <div className="empty-wins">
+                <span>◇</span>
+                <p>The collection awaits<br />its first winner.</p>
+              </div>
+            </section>
+            <footer className="museum-note">
+              <span>CC–2026</span>
+              <p>THREE CLAWS · SIX COLORS<br />THIRTY-SIX CAPSULES</p>
+            </footer>
+          </aside>
+        </section>
+      </div>
     </main>
   );
 }

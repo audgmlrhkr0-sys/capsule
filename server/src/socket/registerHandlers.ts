@@ -23,6 +23,10 @@ export function registerHandlers(io: TypedServer, rooms: RoomManager): void {
         socket.data.roomCode = display.roomCode;
         void socket.join(`room:${display.roomCode}`);
         ack({ ok: true, data: display });
+        const game = rooms.getGame(display.roomCode);
+        if (game) {
+          socket.emit('state:update', game.serialize());
+        }
       } catch {
         ack({ ok: false, error: 'Unable to create a display room' });
       }

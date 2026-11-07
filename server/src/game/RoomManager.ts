@@ -1,10 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import type { DisplayJoined } from '@capsule-claw/shared';
 import { generateRoomCode, type RandomInteger } from '../utils/roomCode.js';
+import { GameRoom } from './GameRoom.js';
 
 interface DisplayRoom {
   roomCode: string;
   displayToken: string;
+  game: GameRoom;
 }
 
 export class RoomManager {
@@ -25,9 +27,11 @@ export class RoomManager {
       }
     }
 
+    const roomCode = this.allocateRoomCode();
     const room: DisplayRoom = {
-      roomCode: this.allocateRoomCode(),
+      roomCode,
       displayToken: this.createToken(),
+      game: new GameRoom(roomCode),
     };
     this.roomsByCode.set(room.roomCode, room);
     this.roomsByToken.set(room.displayToken, room);
@@ -36,6 +40,14 @@ export class RoomManager {
 
   hasRoom(roomCode: string): boolean {
     return this.roomsByCode.has(roomCode);
+  }
+
+  getGame(roomCode: string): GameRoom | undefined {
+    return this.roomsByCode.get(roomCode)?.game;
+  }
+
+  games(): IterableIterator<GameRoom> {
+    return [...this.roomsByCode.values()].map((room) => room.game).values();
   }
 
   private allocateRoomCode(): string {
@@ -50,7 +62,8 @@ export class RoomManager {
 
   private toDisplayJoined(room: DisplayRoom, reconnected: boolean): DisplayJoined {
     return {
-      ...room,
+      roomCode: room.roomCode,
+      displayToken: room.displayToken,
       playUrl: `${this.publicUrl}/play/${room.roomCode}`,
       reconnected,
     };

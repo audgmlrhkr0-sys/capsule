@@ -1,6 +1,6 @@
 # Capsule Claw
 
-Stage 1 scaffold for a multiplayer capsule-claw display.
+Stage 2 foundation for a multiplayer capsule-claw display.
 
 ## Run locally
 
@@ -11,6 +11,8 @@ Stage 1 scaffold for a multiplayer capsule-claw display.
 
 The display creates a four-digit room and stores its display token in
 `sessionStorage`, so refreshing reconnects to the same room.
+Each room runs a server-authoritative Matter.js simulation with 36 capsules.
+The display receives 20 Hz snapshots and interpolates them on Canvas 2D.
 
 ## Commands
 
@@ -19,5 +21,5 @@ The display creates a four-digit room and stores its display token in
 - `npm run build` — build all workspaces
 - `npm test` — run focused server tests
 
-Gameplay, player slots, physics, prizes, and administration are placeholders
+Player controls, turns, prizes, queues, and administration remain placeholders
 for later stages.

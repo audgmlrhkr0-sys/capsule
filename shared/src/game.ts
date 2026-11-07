@@ -1,6 +1,13 @@
 export type SlotId = 0 | 1 | 2;
 export type Direction = 'left' | 'right' | 'up' | 'down';
 export type PlayerColor = 'red' | 'blue' | 'yellow';
+export type CapsuleColor =
+  | 'coral'
+  | 'gold'
+  | 'mint'
+  | 'sky'
+  | 'violet'
+  | 'pink';
 export type TurnPhase =
   | 'waiting'
   | 'aiming'
@@ -17,7 +24,7 @@ export interface CapsuleState {
   angle: number;
   z: number;
   radius: number;
-  color: string;
+  color: CapsuleColor;
 }
 
 export interface ClawState {
