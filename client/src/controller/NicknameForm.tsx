@@ -26,12 +26,11 @@ export function NicknameForm({
   return (
     <main className="nickname-page">
       <section className="nickname-card">
-        <p className="controller-kicker">CAPSULE CLAW · ROOM {roomCode}</p>
-        <span className="nickname-mark">◇</span>
+        <p className="controller-kicker">경북대미술관 소장품 캡슐 뽑기 · ROOM {roomCode}</p>
         <h1>어떤 이름으로<br />참여할까요?</h1>
         <p className="nickname-help">전시장 화면에 표시될 이름을 정해주세요.</p>
         <form onSubmit={submit}>
-          <label htmlFor="nickname">NICKNAME · 최대 6자</label>
+          <label htmlFor="nickname">닉네임 (최대 6자)</label>
           <input
             id="nickname"
             value={nickname}

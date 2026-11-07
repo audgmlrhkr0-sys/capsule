@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import request from 'supertest';
 import { afterEach, describe, expect, it } from 'vitest';
+import { INITIAL_CAPSULE_COUNT } from '../game/constants.js';
 import { RoomManager } from '../game/RoomManager.js';
 import { WinLogStore } from '../logging/WinLogStore.js';
 import { PrizeService } from '../prizes/PrizeService.js';
@@ -193,7 +194,7 @@ describe('admin operations', () => {
       .set('X-CSRF-Token', csrf)
       .send({})
       .expect(200);
-    expect(refilled.body.rooms[0].capsuleCount).toBe(36);
+    expect(refilled.body.rooms[0].capsuleCount).toBe(INITIAL_CAPSULE_COUNT);
 
     const reset = await agent
       .post('/api/admin/reset')

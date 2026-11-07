@@ -27,6 +27,8 @@ export interface CapsuleState {
   color: CapsuleColor;
 }
 
+export type BallState = CapsuleState;
+
 export interface ClawState {
   slot: SlotId;
   x: number;
@@ -61,6 +63,7 @@ export interface PublicGameState {
   roomCode: string;
   serverTime: number;
   capsules: CapsuleState[];
+  balls: BallState[];
   claws: ClawState[];
   players: Array<PlayerState | null>;
   recentWins: WinRecord[];

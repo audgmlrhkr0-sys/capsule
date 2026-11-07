@@ -24,7 +24,7 @@ export function CooldownView({
   return (
     <main className="cooldown-page">
       <section className="cooldown-card">
-        <p className="controller-kicker">NEXT TURN</p>
+        <p className="controller-kicker">다음 차례까지</p>
         <span className="cooldown-number">{remaining}</span>
         <h1>잠시 쉬어가세요</h1>
         <p>같은 플레이어의 연속 참여를 막기 위한 대기 시간입니다.</p>

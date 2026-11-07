@@ -173,7 +173,7 @@ describe('session and queue lifecycle', () => {
   it('refills only when claw operations are safe and count is five or less', () => {
     const { game } = setup();
     game.connect('하나', undefined, 'socket-1');
-    for (const capsule of game.physics.serialize().slice(0, 31)) {
+    for (const capsule of game.physics.serialize().slice(0, INITIAL_CAPSULE_COUNT - 5)) {
       game.physics.removeCapsule(capsule.id);
     }
     expect(game.physics.count).toBe(5);

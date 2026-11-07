@@ -8,7 +8,7 @@ export function ResultView({
   return (
     <main className={`controller-result ${success ? 'result-success' : 'result-empty'}`}>
       <section>
-        <p className="controller-kicker">TURN RESULT</p>
+        <p className="controller-kicker">뽑기 결과</p>
         <div className="result-symbol" aria-hidden="true">{success ? '✦' : '◇'}</div>
         <h1>{success ? prizeName : '빈 캡슐이에요'}</h1>
         {success ? (

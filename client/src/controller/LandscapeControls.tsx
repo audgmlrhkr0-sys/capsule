@@ -6,7 +6,13 @@ import { DropButton } from './DropButton';
 import { OrientationOverlay } from './OrientationOverlay';
 import { ResultView } from './ResultView';
 
-const SLOT_NAMES = ['CRIMSON', 'AZURE', 'MARIGOLD'] as const;
+const SLOT_NAMES = ['1P 빨강', '2P 파랑', '3P 노랑'] as const;
+const PHASE_NOTES: Partial<Record<TurnPhase, string>> = {
+  aiming: '방향을 정한 뒤 내리기를 누르세요.',
+  dropping: '집게가 내려가는 중…',
+  lifting: '집게가 올라오는 중…',
+  dispensing: '배출구로 옮기는 중…',
+};
 
 export function LandscapeControls({
   roomCode,
@@ -50,7 +56,7 @@ export function LandscapeControls({
     <main className={`controller-page controller-slot-${slot + 1}`}>
       <header className="controller-header">
         <span>ROOM {roomCode}</span>
-        <strong>CAPSULE CLAW</strong>
+        <strong>경북대미술관 소장품 캡슐 뽑기</strong>
         <span>{nickname}</span>
       </header>
       <section className="control-layout">
@@ -58,18 +64,14 @@ export function LandscapeControls({
           <DPad disabled={disabled} />
         </div>
         <div className="control-center">
-          <p>YOUR CLAW</p>
+          <p>내 집게</p>
           <span className="claw-color-dot" />
           <strong>{SLOT_NAMES[slot]}</strong>
           <div className="turn-timer">
-            <small>TURN TIME</small>
+            <small>남은 시간</small>
             <b>0:{remaining.toString().padStart(2, '0')}</b>
           </div>
-          <p className="stage-note">
-            {phase === 'aiming'
-              ? '방향을 정한 뒤 DROP을 누르세요.'
-              : phase.toUpperCase()}
-          </p>
+          <p className="stage-note">{PHASE_NOTES[phase] ?? ''}</p>
         </div>
         <div className="control-right">
           <DropButton disabled={disabled} />

@@ -4,6 +4,7 @@ import {
   CAPSULE_RADIUS,
   CLAW_X_MAX,
   FIXED_TIMESTEP_MS,
+  INITIAL_CAPSULE_COUNT,
   RESULT_DURATION_MS,
   TURN_DURATION_MS,
 } from './constants.js';
@@ -56,13 +57,13 @@ describe('server-authoritative claw turns', () => {
 
   it('uses the exact 2 × radius × 1.2 hit boundary', () => {
     const threshold = 2 * CAPSULE_RADIUS * 1.2;
-    const hitPhysics = new CapsulePhysics(() => 0.5);
+    const hitPhysics = new CapsulePhysics(() => 0.5, 1, 0);
     const hitTarget = hitPhysics.serialize().at(-1)!;
     expect(
       hitPhysics.takeNearest(hitTarget.x + threshold, hitTarget.z, threshold),
     ).not.toBeNull();
 
-    const missPhysics = new CapsulePhysics(() => 0.5);
+    const missPhysics = new CapsulePhysics(() => 0.5, 1, 0);
     const missTarget = missPhysics.serialize().at(-1)!;
     expect(
       missPhysics.takeNearest(
@@ -93,7 +94,7 @@ describe('server-authoritative claw turns', () => {
     ]);
     expect(game.serialize().recentWins[0]?.nickname).toBe('손님');
     expect(game.adminStats().completedPlays).toBe(1);
-    expect(game.physics.count).toBe(35);
+    expect(game.physics.count).toBe(INITIAL_CAPSULE_COUNT - 1);
 
     tickFrames(game, Math.ceil(RESULT_DURATION_MS / FIXED_TIMESTEP_MS) + 1);
     expect(game.serialize().claws[0]!.phase).toBe('waiting');

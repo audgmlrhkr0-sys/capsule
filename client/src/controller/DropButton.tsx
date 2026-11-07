@@ -28,15 +28,14 @@ export function DropButton({ disabled = false }: { disabled?: boolean }) {
       type="button"
       className="drop-button"
       data-active={pressed}
-      aria-label="Drop claw"
+      aria-label="집게 내리기"
       disabled={disabled}
       onPointerDown={activate}
       onPointerUp={release}
       onPointerCancel={release}
       onLostPointerCapture={release}
     >
-      <span>DROP</span>
-      <small>집게 내리기</small>
+      <span>내리기</span>
     </button>
   );
 }

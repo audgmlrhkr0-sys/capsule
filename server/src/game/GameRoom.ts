@@ -15,8 +15,8 @@ import type { WinLogStore } from '../logging/WinLogStore.js';
 import { PrizeService } from '../prizes/PrizeService.js';
 import { CapsulePhysics } from './CapsulePhysics.js';
 import {
-  CAPSULE_RADIUS,
   CLAW_DROP_DEPTH,
+  CLAW_GRAB_RADIUS,
   CLAW_MOVE_SPEED,
   CLAW_X_MAX,
   CLAW_X_MIN,
@@ -26,6 +26,7 @@ import {
   DISCONNECT_GRACE_MS,
   DISPENSE_DURATION_MS,
   DROP_DURATION_MS,
+  HELD_CAPSULE_OFFSET,
   LIFT_DURATION_MS,
   IDLE_TIMEOUT_MS,
   OUTLET_X,
@@ -56,6 +57,7 @@ interface RuntimeClaw extends ClawState {
   phaseElapsed: number;
   dispenseFromX: number;
   dispenseFromZ: number;
+  dropTarget: number;
   success: boolean;
   prizeName: string | null;
 }
@@ -296,6 +298,10 @@ export class GameRoom {
     claw.phase = 'dropping';
     claw.phaseElapsed = 0;
     claw.pressed.clear();
+    const target = this.physics.peekNearest(claw.x, claw.z, CLAW_GRAB_RADIUS);
+    claw.dropTarget = target
+      ? clamp(target.y - HELD_CAPSULE_OFFSET, 0, CLAW_DROP_DEPTH)
+      : CLAW_DROP_DEPTH;
     const player = this.playerSlots[slot];
     if (player) {
       player.turnEndsAt = null;
@@ -397,9 +403,19 @@ export class GameRoom {
       roomCode: this.roomCode,
       serverTime: this.now(),
       capsules: [...this.physics.serialize(), ...this.heldCapsules.values()],
-      claws: this.claws.map(({ pressed, phaseElapsed, dispenseFromX, dispenseFromZ, success, prizeName, ...claw }) => ({
-        ...claw,
-      })),
+      balls: this.physics.serializeBalls(),
+      claws: this.claws.map(
+        ({
+          pressed,
+          phaseElapsed,
+          dispenseFromX,
+          dispenseFromZ,
+          dropTarget,
+          success,
+          prizeName,
+          ...claw
+        }) => ({ ...claw }),
+      ),
       players: this.playerSlots.map((player) => (player ? { ...player } : null)),
       recentWins: this.recentWins.map((win) => ({ ...win })),
     };
@@ -428,10 +444,9 @@ export class GameRoom {
     claw.phaseElapsed += deltaMs;
     if (claw.phase === 'dropping') {
       const progress = Math.min(1, claw.phaseElapsed / DROP_DURATION_MS);
-      claw.height = CLAW_DROP_DEPTH * progress;
+      claw.height = claw.dropTarget * progress;
       if (progress === 1) {
-        const threshold = 2 * CAPSULE_RADIUS * 1.2;
-        const capsule = this.physics.takeNearest(claw.x, claw.z, threshold);
+        const capsule = this.physics.takeNearest(claw.x, claw.z, CLAW_GRAB_RADIUS);
         claw.success = false;
         claw.prizeName = null;
         if (capsule) {
@@ -452,7 +467,7 @@ export class GameRoom {
 
     if (claw.phase === 'lifting') {
       const progress = Math.min(1, claw.phaseElapsed / LIFT_DURATION_MS);
-      claw.height = CLAW_DROP_DEPTH * (1 - progress);
+      claw.height = claw.dropTarget * (1 - progress);
       this.positionHeldCapsule(slot);
       if (progress === 1) {
         claw.phase = 'dispensing';
@@ -698,7 +713,7 @@ export class GameRoom {
     }
     capsule.x = claw.x;
     capsule.z = claw.z;
-    capsule.y = 180 + claw.height;
+    capsule.y = HELD_CAPSULE_OFFSET + claw.height;
     capsule.angle = 0;
   }
 
@@ -714,6 +729,7 @@ export class GameRoom {
       phaseElapsed: 0,
       dispenseFromX: PHYSICS_WIDTH / 2,
       dispenseFromZ: PHYSICS_DEPTH / 2,
+      dropTarget: CLAW_DROP_DEPTH,
       success: false,
       prizeName: null,
     };
