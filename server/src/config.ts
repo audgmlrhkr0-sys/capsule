@@ -1,4 +1,9 @@
-import 'dotenv/config';
+import { config as loadEnv } from 'dotenv';
+import { fileURLToPath } from 'node:url';
+
+loadEnv({
+  path: fileURLToPath(new URL('../../.env', import.meta.url)),
+});
 
 function readPort(value: string | undefined): number {
   const port = Number(value ?? 3000);
